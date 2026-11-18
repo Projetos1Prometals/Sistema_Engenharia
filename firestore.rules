@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// Regras do banco do Sistema Engenharia.
+// Firebase → Firestore Database → Regras → cole este texto → Publicar.
+// Para liberar uma pessoa nova: crie o usuário em Authentication e
+// acrescente o e-mail na lista abaixo.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function liberado() {
+      return request.auth != null && request.auth.token.email in [
+        'projetos1@prometals.co',
+        'qualidade1@prometals.co'
+      ];
+    }
+
+    // Dados da Engenharia: todas as coleções que começam com "eng_"
+    match /{colecao}/{doc} {
+      allow read, write: if colecao.matches('eng_.*') && liberado();
+    }
+  }
+}

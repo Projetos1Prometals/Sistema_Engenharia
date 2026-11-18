@@ -1,0 +1,66 @@
+/* =====================================================================
+   liga/liga.css — telas do Cálculo de Liga e boletim impresso
+   ===================================================================== */
+.txt-verm{color:var(--verm)} .txt-amar{color:var(--amar)} .txt-verde{color:var(--verde)} .txt-az{color:var(--az)}
+td.txt-verm{font-weight:700} td.txt-amar{font-weight:700}
+
+/* cores BAIXO / OK / ALTO (iguais à planilha) */
+.st-baixo{background:var(--amar-bg);color:var(--amar)!important;font-weight:700}
+.st-ok{background:var(--verde-bg);color:var(--verde)!important;font-weight:700}
+.st-alto{background:var(--verm-bg);color:var(--verm)!important;font-weight:700}
+.legenda{display:flex;gap:6px}
+.legenda i{font-style:normal;font-size:10.5px;padding:2px 8px;border-radius:4px;letter-spacing:.05em}
+
+.comp-grade{display:grid;grid-template-columns:1fr 200px;gap:16px;align-items:stretch}
+@media (max-width:1100px){.comp-grade{grid-template-columns:1fr}}
+.tab-comp th,.tab-comp td{padding:7px 6px}
+.tab-comp td:first-child{white-space:nowrap;padding-left:12px}
+.tab-comp input.ent{padding:6px 5px;text-align:center;min-width:54px}
+.tab-comp input.ent[data-k="desc"]{text-align:left}
+.carga-box{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:14px 16px;border:1px solid var(--linha);border-radius:var(--raio);background:var(--bg)}
+.carga-box span{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.carga-box b{font-size:30px;font-weight:800}
+.carga-box b small{font-size:14px;color:var(--mut);font-weight:600}
+.carga-box em{font-style:normal;font-size:12px;padding:3px 8px;border-radius:6px;align-self:flex-start;color:var(--mut)}
+
+.linha-ret{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:12px}
+.linha-ret .ret-info{grid-column:1/-1;font-size:12px;color:var(--mut);margin-top:-4px}
+.grade-kg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.item-kg{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--txt)}
+.item-kg span{display:flex;justify-content:space-between;gap:6px}
+.item-kg small{color:var(--mut2);font-weight:500;font-size:11px}
+.opcao{display:block;padding:10px 12px;border:1px solid var(--linha);border-radius:8px;margin-bottom:8px;cursor:pointer}
+.opcao input{margin-right:6px}
+h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+
+/* ---------- boletim (só aparece na impressão) ---------- */
+#boletim{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  html,body{background:#fff!important;color:#000!important}
+  :root{color-scheme:light}
+  .conteudo{padding:0!important}
+  #boletim{display:block}
+  .aviso,.fundo-modal{display:none!important}
+}
+.bol{font:11.5px/1.35 "Segoe UI",Arial,sans-serif;color:#000}
+.bol-topo{display:flex;align-items:center;gap:14px;border-bottom:2px solid #E2622C;padding-bottom:8px;margin-bottom:10px}
+.bol-topo img{height:34px}
+.bol-topo h2{margin:0;font-size:18px}
+.bol-topo small{color:#555}
+.bol-topo .bol-data{margin-left:auto;font-size:10px;color:#555}
+.bol-dados{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #999;margin-bottom:10px}
+.bol-dados div{padding:5px 8px;border-right:1px solid #ccc;border-bottom:1px solid #ccc}
+.bol-dados div.larga{grid-column:span 2}
+.bol-dados span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#555}
+.bol-dados b{font-size:13px}
+.bol h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px;color:#333}
+.bol table{width:100%;border-collapse:collapse}
+.bol th,.bol td{border:1px solid #999;padding:4px 6px;text-align:left}
+.bol th{background:#f1f1f1;font-size:10px;text-transform:uppercase}
+.bol .dir{text-align:right}
+.bol-comp th,.bol-comp td{text-align:center;padding:3px 2px;font-size:10.5px}
+.bol-comp td:first-child{text-align:left;padding-left:6px}
+.bol-obs{border:1px solid #999;min-height:60px;padding:6px}
+.bol-ass{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.bol-ass div{border-top:1px solid #000;padding-top:4px;text-align:center;font-size:10px}
