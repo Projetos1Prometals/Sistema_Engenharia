@@ -10,7 +10,7 @@ import {
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno,
 } from './calculo.js?v=1.1.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
-import { lerPlanilha } from './importar.js';
+import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
 
 // ---------------------------------------------------------------------
 // Estado (dados que chegam do banco)
@@ -173,7 +173,7 @@ function paginaCorridas() {
       if (f.chip === 'planilha' && x.c.origem !== 'planilha') return false;
       if (f.liga && !mesmaLiga(S.ligas, x.c.liga, f.liga)) return false;
       if (q) {
-        const alvo = [numeroCorrida(x.c), x.c.liga, x.c.fs, (x.c.ops || []).join(' '), x.c.opsTexto, (x.c.retornos || []).map(r => r.codigo).join(' '), x.c.retornoGerado].join(' ').toLowerCase();
+        const alvo = [numeroCorrida(x.c), x.c.liga, x.c.fs, (x.c.ops || []).join(' '), x.c.opsTexto, (x.c.retornos || []).map(r => r.codigo).join(' '), x.c.retornoGerado, x.c.lab && x.c.lab.relatorio].join(' ').toLowerCase();
         if (!alvo.includes(q)) return false;
       }
       return true;
@@ -193,7 +193,8 @@ function paginaCorridas() {
         <td class="dir num ${cargaClasse(c.carga)}">${fmtKg(c.carga)}</td>
         <td class="dir num">${c.temperatura ? esc(c.temperatura) + '°' : ''}</td>
         <td class="mut">${esc((c.retornos || []).map(r => r.codigo).join(', '))}</td>
-        <td>${foraEst.length ? `<span class="tag alerta" title="${esc(foraEst.join(', '))}">${foraEst.length} fora</span>` : '<span class="tag ok">ok</span>'}</td>
+        <td>${c.origem === 'planilha' && !temAnalise(c.estimadoPlanilha) ? '<span class="mut" title="A planilha Controle de Corrida não tem a composição estimada">–</span>'
+          : foraEst.length ? `<span class="tag alerta" title="${esc(foraEst.join(', '))}">${foraEst.length} fora</span>` : '<span class="tag ok">ok</span>'}</td>
         <td><span class="tag ${st.cls}" title="${esc(st.fora.join(', '))}">${st.texto}</span></td>
       </tr>`).join('')}</tbody></table>
       ${total > 300 ? `<div class="vazio">Mostrando as 300 mais recentes de ${total}. Use a busca para achar as outras.</div>` : ''}`;
@@ -274,7 +275,9 @@ function paginaCorrida(id) {
       <button class="btn" id="btBoletim">${icone('impressora')} Imprimir boletim</button>
       <button class="btn pri" id="btSalvar">${icone('salvar')} Salvar corrida</button>
     </div>
-    ${ed.importada ? `<div class="faixa lar nao-imprimir">Corrida importada da planilha. A composição das entradas manuais não ficou salva na planilha, por isso o estimado mostrado é o que a planilha calculou na época.</div>` : ''}
+    ${!ed.importada ? '' : orig.controle && !temAnalise(orig.estimadoPlanilha)
+      ? `<div class="faixa lar nao-imprimir">Corrida importada da planilha Controle de Corrida (aba ${esc(orig.controle.aba)}, linha ${esc(orig.controle.linha)}). Essa planilha não tem a composição estimada${orig.controle.total ? `; total na planilha ${fmtKg(orig.controle.total)} kg${orig.controle.recarga ? ` (com ${fmtKg(orig.controle.recarga)} kg de recarga)` : ''}` : ''}.</div>`
+      : `<div class="faixa lar nao-imprimir">Corrida importada da planilha. A composição das entradas manuais não ficou salva na planilha, por isso o estimado mostrado é o que a planilha calculou na época.${orig.controle ? ` Completada com a planilha Controle de Corrida (aba ${esc(orig.controle.aba)}, linha ${esc(orig.controle.linha)}).` : ''}</div>`}
     <div class="nao-imprimir" id="ficha">
       <div class="cartao"><h2>Dados de produção</h2><div class="corpo"><div class="linha-campos">
         <label class="campo">Liga<select class="ent" data-f="liga">${optLigas(d.liga)}</select></label>
@@ -442,6 +445,7 @@ function paginaCorrida(id) {
         <label class="campo">Laboratório / empresa${ent('data-lab="empresa"', lab.empresa)}</label>
         <label class="campo">O.S.${ent('data-lab="os"', lab.os)}</label>
         <label class="campo">Nº relatório de ensaio${ent('data-lab="relatorio"', lab.relatorio)}</label>
+        <label class="campo">Data da coleta<input class="ent" type="date" data-lab="dataColeta" value="${esc(lab.dataColeta || '')}"></label>
         <label class="campo">Data do resultado<input class="ent" type="date" data-lab="data" value="${esc(lab.data || '')}"></label>
       </div>
       <div class="tab-wrap"><table class="tab tab-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
@@ -528,7 +532,10 @@ function paginaCorrida(id) {
       carga: ed.importada ? orig.carga : Math.round(calc.carga * 10) / 10,
       estimado: calc.estimado, real: n.real, lab: n.lab || {}, retornoGerado: n.retornoGerado || '', obs: n.obs || '',
     };
-    if (ed.importada) { dados.estimadoPlanilha = orig.estimadoPlanilha || {}; dados.anualInferido = orig.anualInferido; dados.ligaPlanilha = orig.ligaPlanilha; dados.opsTexto = orig.opsTexto; }
+    if (ed.importada) {
+      dados.estimadoPlanilha = orig.estimadoPlanilha || {}; dados.anualInferido = orig.anualInferido; dados.ligaPlanilha = orig.ligaPlanilha; dados.opsTexto = orig.opsTexto;
+      if (orig.controle) dados.controle = orig.controle;   // o que veio da planilha Controle de Corrida
+    }
     banco.salvar(COL.corridas, novoId, dados).catch(e => aviso('Erro ao salvar: ' + e.message, 'erro'));
     // Atualiza os contadores se esta é a corrida mais recente
     const ct = cfg().contadores || {};
@@ -972,6 +979,13 @@ function paginaConfig() {
       <label class="btn">${icone('subir')} Escolher planilha…<input type="file" id="arqPlan" accept=".xlsm,.xlsx,.xls" class="oculto"></label>
       <span class="mut" id="statusImp" style="margin-left:10px"></span>
     </div></div>
+    <div class="cartao"><h2>Importar a planilha Controle de Corrida</h2><div class="corpo">
+      <p style="margin-top:0">Traz das abas <b>Controle Corrida AAAA</b> (2023, 2024…) o histórico de corridas: nº anual, liga, retorno, OP, kg dos materiais, <b>recarga</b>, nº do relatório e datas do laboratório.
+        As corridas que já vieram da Calculo de Ligas (mesma data, nº e liga) só são completadas; as outras entram como histórico.</p>
+      <p class="mut">Importe a Calculo de Ligas primeiro. Pode importar de novo quantas vezes precisar.</p>
+      <label class="btn">${icone('subir')} Escolher planilha…<input type="file" id="arqCtrl" accept=".xlsx,.xlsm,.xls" class="oculto"></label>
+      <span class="mut" id="statusCtrl" style="margin-left:10px"></span>
+    </div></div>
     <div class="cartao"><h2>Cópia de segurança</h2><div class="corpo">
       <p style="margin-top:0">Baixa um arquivo com tudo do Cálculo de Liga (corridas, retornos, ligas, materiais e configurações). Guarde na rede de vez em quando.</p>
       <button class="btn" id="btExp">${icone('baixar')} Baixar cópia (.json)</button>
@@ -980,6 +994,7 @@ function paginaConfig() {
     <div class="cartao"><h2>Banco de dados</h2><div class="corpo" id="boxBanco"></div></div>`;
 
   C.querySelector('#arqPlan').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importarPlanilha(f); };
+  C.querySelector('#arqCtrl').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importarControle(f); };
   C.querySelector('#btExp').onclick = exportarBackup;
   C.querySelector('#arqBkp').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) restaurarBackup(f); };
 
@@ -1056,7 +1071,12 @@ async function importarPlanilha(arquivo) {
         const { id, ...resto } = x;
         ops.push({ col: COL.retornos, id, dados: { ...(atual ? semMeta(atual) : {}), ...resto } });
       });
-      if (el.querySelector('#iCor').checked) dados.corridas.forEach(c => { const { id, ...resto } = c; ops.push({ col: COL.corridas, id, dados: resto }); });
+      if (el.querySelector('#iCor').checked) dados.corridas.forEach(c => {
+        const { id, ...resto } = c;
+        // mantém o que já tinha vindo da planilha Controle de Corrida (anual, recarga, relatório…)
+        const atual = S.corridas.find(x => x.id === id);
+        ops.push({ col: COL.corridas, id, dados: aplicarControle(resto, atual && atual.controle) });
+      });
       if (el.querySelector('#iCfg').checked && dados.config) ops.push({ col: COL.config, id: 'liga', dados: { ...cfg(), ...dados.config } });
       if (!ops.length) { aviso('Nada marcado para importar.', 'erro'); return false; }
       el.querySelectorAll('button').forEach(b => { b.disabled = true; });
@@ -1064,6 +1084,59 @@ async function importarPlanilha(arquivo) {
       try {
         await banco.emLote(ops, (feito, total) => { prog.textContent = `Gravando ${feito} de ${total}…`; });
         aviso(`Importação concluída: ${ops.length} registros.`);
+      } catch (e) {
+        console.error(e);
+        aviso('Erro na importação: ' + e.message, 'erro');
+        el.querySelectorAll('button').forEach(b => { b.disabled = false; });
+        return false;
+      }
+    } }],
+  });
+}
+
+async function importarControle(arquivo) {
+  const st = C.querySelector('#statusCtrl');
+  st.textContent = 'Lendo a planilha…';
+  let dados;
+  try { dados = await lerControle(arquivo, { ligas: S.ligas, retornos: S.retornos, corridas: S.corridas }); }
+  catch (e) { console.error(e); st.textContent = ''; return aviso('Não consegui ler a planilha: ' + e.message, 'erro'); }
+  st.textContent = '';
+  const r = dados.resumo;
+  if (!r.completadas && !r.novas) return aviso('Nenhuma corrida encontrada nas abas "Controle Corrida AAAA".', 'erro');
+  const semBanco = !S.corridas.some(c => String(c.id).startsWith('planilha-'));
+  const ct = cfg().contadores || {};
+  const u = dados.ultima;
+  const anoAtual = String(new Date().getFullYear());
+  const contadorNovo = u && String(u.data).startsWith(anoAtual) && (u.anual || 0) > (+ct.anual || 0);
+  janela({
+    titulo: 'Importar ' + arquivo.name, larga: true,
+    html: `<table class="tab" style="margin-bottom:12px"><thead><tr><th>Aba</th><th class="dir">Corridas</th><th class="dir">Completam corridas já importadas</th><th class="dir">Novas no histórico</th></tr></thead><tbody>
+        ${dados.abas.map(a => `<tr><td>${esc(a.aba)}</td><td class="dir num">${a.lidas}</td><td class="dir num">${a.completadas}</td><td class="dir num">${a.novas}</td></tr>`).join('')}
+      </tbody></table>
+      <p style="margin:0 0 8px">${r.comRecarga} corridas com recarga · ${r.comRelatorio} com nº de relatório · ${r.ligadasAnalise} ligadas ao retorno que geraram (com a análise do laboratório).</p>
+      <p class="mut" style="margin:0 0 8px">Entram como "histórico da planilha": não mexem no saldo dos retornos. A carga de cada corrida é o total da planilha menos a recarga.</p>
+      ${semBanco ? `<div class="faixa verm" style="margin:0 0 8px">Ainda não há corridas da planilha <b>Calculo de Ligas</b>. Se importar a Controle primeiro, as corridas de nov/2025 em diante podem aparecer duas vezes depois. Recomendo importar a Calculo de Ligas antes.</div>` : ''}
+      <label class="opcao"><input type="checkbox" id="iCt" ${contadorNovo ? 'checked' : ''} ${u ? '' : 'disabled'}> <b>Atualizar a numeração</b>${u ? `: última corrida da planilha é a ${esc(numeroCorrida(u))} de ${fmtData(u.data)} (no sistema: anual ${+ct.anual || 0}, refratário ${+ct.refratario || 0})` : ''}.</label>
+      ${dados.avisos.length ? `<div class="faixa lar" style="margin-top:12px">${dados.avisos.slice(0, 8).map(esc).join('<br>')}${dados.avisos.length > 8 ? `<br>… e mais ${dados.avisos.length - 8}` : ''}</div>` : ''}
+      <div id="progCtrl" class="mut"></div>`,
+    botoes: [{ texto: 'Cancelar' }, { texto: 'Importar', cls: 'pri', acao: async el => {
+      const ops = [];
+      for (const { id, ct: c } of dados.completar) {
+        const atual = S.corridas.find(x => x.id === id);
+        if (atual) ops.push({ col: COL.corridas, id, dados: aplicarControle(semMeta(atual), c) });
+      }
+      for (const c of dados.novas) {
+        const { id, ...resto } = c;
+        const atual = S.corridas.find(x => x.id === id);
+        // corrida já importada e depois editada no sistema: mantém o laboratório e as observações dela
+        ops.push({ col: COL.corridas, id, dados: atual ? { ...resto, real: atual.real || {}, lab: { ...resto.lab, ...(atual.lab || {}) }, obs: atual.obs || resto.obs } : resto });
+      }
+      if (el.querySelector('#iCt').checked && u) ops.push({ col: COL.config, id: 'liga', dados: { ...cfg(), contadores: { anual: u.anual || 0, refratario: u.refratario || 0 } } });
+      el.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      const prog = el.querySelector('#progCtrl');
+      try {
+        await banco.emLote(ops, (feito, total) => { prog.textContent = `Gravando ${feito} de ${total}…`; });
+        aviso(`Importação concluída: ${r.completadas} corridas completadas e ${r.novas} no histórico.`);
       } catch (e) {
         console.error(e);
         aviso('Erro na importação: ' + e.message, 'erro');

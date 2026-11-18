@@ -1,0 +1,5 @@
+# Planilhas com dados da empresa: nunca enviar (o repositório é público)
+planilhas_dados/
+*.xlsx
+*.xlsm
+*.xls

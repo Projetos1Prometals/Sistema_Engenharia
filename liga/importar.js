@@ -212,3 +212,203 @@ export async function lerPlanilha(arquivo, ligasAtuais) {
   };
   return out;
 }
+
+// =====================================================================
+//  Planilha CONTROLE_CORRIDA_ENGENHARIA — abas "Controle Corrida AAAA"
+//  Uma linha por corrida: data, nº (refratário), nº anual, liga, retorno, OP,
+//  kg de cada material, Recarga, Total (= carga do forno + recarga) e laboratório.
+//  - Corrida que já veio da aba Banco de dados (mesma data, nº e liga): só é completada
+//    (nº anual real, recarga, relatório e datas do laboratório) — ver aplicarControle().
+//  - Corrida que só existe aqui: entra como histórico ("hist-AAAA-NNN"), sem estimado.
+// =====================================================================
+
+// Cabeçalho (normalizado por cab()) → material do cadastro
+const CT_MATERIAIS = {
+  SUCATA430KG: 'sae430', '316KG': 'sae316', '304KG': 'sae304', SUCATA304KG: 'sae304', SUCATA316KG: 'sae316',
+  SIKG: 'fesi', CRACKG: 'fecr_ac', MNACKG: 'femn_ac', MNBCKG: 'femn_bc', MOKG: 'femo', NBKG: 'fenb',
+  CRBCKG: 'fecr_bc', VKG: 'fev', NIQUELNI: 'ni', NIQUELKG: 'ni', CUKG: 'cu', GRAFITEKG: 'grafite', INOX420: 'sae420',
+};
+// Materiais da planilha que não estão no cadastro: entram como entrada manual (kg sem composição)
+const CT_MANUAIS = { INOX410: 'Inox 410', SUCATA1010KG: 'Sucata 1010' };
+
+// Junta à corrida os dados da planilha Controle (usado na importação da Controle e
+// também ao reimportar a Calculo de Ligas, para não perder o que veio da Controle).
+export function aplicarControle(c, ct) {
+  if (!ct) return c;
+  const x = { ...c, controle: ct };
+  if (ct.anual != null) { x.anual = ct.anual; x.anualInferido = false; }
+  if (!(x.ops || []).length && ct.ops && ct.ops.length) { x.ops = ct.ops; x.opsTexto = ct.opsTexto; }
+  x.lab = { ...(c.lab || {}) };
+  if (ct.relatorio && !x.lab.relatorio) x.lab.relatorio = ct.relatorio;
+  if (ct.dataColeta && !x.lab.dataColeta) x.lab.dataColeta = ct.dataColeta;
+  if (ct.dataResultado && !x.lab.data) x.lab.data = ct.dataResultado;
+  if (ct.recarga) {
+    const rets = (c.retornos || []).map(r => ({ ...r }));
+    const alvo = rets.find(r => ct.retorno && r.codigo === ct.retorno) || rets[0];
+    if (alvo) alvo.recarga = ct.recarga;
+    else rets.push({ codigo: ct.retorno || '', kg: 0, recarga: ct.recarga });
+    x.retornos = rets;
+  }
+  if (!x.retornoGerado && ct.retornoGerado) x.retornoGerado = ct.retornoGerado;
+  return x;
+}
+
+
+export async function lerControle(arquivo, { ligas, retornos, corridas }) {
+  const XLSX = await carregarSheetJS();
+  const wb = XLSX.read(await arquivo.arrayBuffer(), { type: 'array', cellDates: true });
+  const avisos = [];
+  // A Controle escreve a liga de vários jeitos ("A-532 (FB)", "304 CF8", "316 CF8 M", "Inox 430", "Aço MN", "A27/1030").
+  // Tenta: o texto todo, sem o parêntese, o que está no parêntese, os finais ("CF8 M"), cada pedaço.
+  const nomeLiga = bruto => {
+    const s = txt(bruto);
+    const pal = s.replace(/\(.*?\)/g, ' ').split(/[\s/]+/).filter(Boolean);
+    const cands = [s, s.replace(/\(.*?\)/g, ''), ...(s.match(/\((.*?)\)/g) || []).map(p => p.slice(1, -1)),
+      ...pal.map((_, i) => pal.slice(i).join(' ')), ...pal];
+    for (const c of cands) { const l = acharLiga(ligas, c); if (l) return l.nome; }
+    return s;
+  };
+  const normRel = s => txt(s).toUpperCase().replace(/\s/g, '');
+
+  // Retornos do cadastro: pelo começo do código ("57-223" → "57-223-CRK") e pelo nº do relatório
+  const porRelatorio = new Map();
+  for (const r of retornos) { const k = normRel(r.relatorio); if (k) porRelatorio.set(k, porRelatorio.has(k) ? null : r.codigo); }
+  const acharRetorno = bruto => {
+    const s = txt(bruto);
+    if (!/^\d+\s*-\s*\d+$/.test(s)) return s;
+    const p = s.replace(/\s/g, '') + '-';
+    const achados = retornos.filter(r => String(r.codigo).replace(/\s/g, '').startsWith(p));
+    return achados.length === 1 ? achados[0].codigo : s.replace(/\s/g, '');
+  };
+
+  // Retorno gerado pela corrida: o código "68-190-SFK" é a corrida nº 68, anual 190 (só quando o par é único)
+  const porRefAnual = new Map();
+  for (const r of retornos) {
+    const m = String(r.codigo).match(/^\s*(\d+)\s*-\s*(\d+)\s*-/);
+    const k = r.corridaRef ? `${r.corridaRef.refratario}-${r.corridaRef.anual}` : m ? `${+m[1]}-${+m[2]}` : '';
+    if (k) porRefAnual.set(k, porRefAnual.has(k) ? null : r);
+  }
+
+  // Corridas que vieram da aba Banco de dados, para completar em vez de duplicar.
+  // As datas das duas planilhas às vezes diferem em alguns dias: casa pelo mesmo nº da corrida
+  // até 7 dias de diferença, confirmando pela OP, pelo nº anual ou pela liga.
+  const doBanco = corridas.filter(c => c.origem === 'planilha' && String(c.id).startsWith('planilha-'));
+  const dias = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000);
+  const acharNoBanco = (data, ref, anual, liga, ops, carga, usados) => {
+    let melhor = null, nota = 0;
+    for (const c of doBanco) {
+      if (usados.has(c.id) || c.refratario !== ref || !c.data || dias(c.data, data) > 7) continue;
+      let p = 0;
+      if (ops.length && (c.ops || []).some(o => ops.includes(o))) p += 4;
+      if (anual != null && c.anual === anual) p += 3;
+      if (liga && normLiga(c.liga) === normLiga(liga)) p += 2;
+      if (carga && c.carga && Math.abs(c.carga - carga) <= 1) p += 2;
+      if (p < 2) continue;
+      p += c.data === data ? 1 : -dias(c.data, data) * 0.1;
+      if (p > nota) { nota = p; melhor = c; }
+    }
+    return melhor;
+  };
+
+  const out = { completar: [], novas: [], abas: [], avisos, ultima: null };
+  const usados = new Set();
+  const abas = wb.SheetNames.map(nome => ({ nome, ano: (nome.match(/^\s*controle[\s_]*corrida[\s_]*(\d{4})\s*$/i) || [])[1] }))
+    .filter(a => a.ano).sort((a, b) => a.ano - b.ano);
+  if (!abas.length) avisos.push('Nenhuma aba "Controle Corrida AAAA" encontrada nesta planilha.');
+
+  for (const { nome, ano } of abas) {
+    const L = XLSX.utils.sheet_to_json(wb.Sheets[nome], { header: 1, raw: true, defval: null, blankrows: true });
+    const cabCt = v => cab(txt(v).normalize('NFD').replace(/[̀-ͯ]/g, ''));   // "Relatório" → RELATORIO
+    const iCab = L.slice(0, 6).findIndex(r => (r || []).some(v => cabCt(v) === 'DATACORRIDA'));
+    if (iCab < 0) { avisos.push(`Aba "${nome}": não achei o cabeçalho (Data corrida); aba ignorada.`); continue; }
+    const h = (L[iCab] || []).map(cabCt);
+    const col = (...nomes) => h.findIndex(x => nomes.includes(x));
+    const cData = col('DATACORRIDA'), cRef = col('NCORRIDA'), cAnual = col('NCORRIDAANUAL');
+    const cLiga = col('LIGAMATERIALTECHMELT', 'LIGAMATERIALPROMETALS'), cTerc = col('LIGAMATERIALTERCEIROS');
+    const cOp = col('OPLIGA'), cRetKg = col('RETORNOKG'), cRec = col('RECARGAKG'), cTot = col('TOTALCORRIDAKG');
+    const cRel = col('NRELATORIO'), cColeta = col('DATACOLETALABORATORIO'), cEntrega = col('DATAENTREGARELATORIO');
+    // Coluna do retorno: a de "Rastreio"/"Retorno" logo antes da OP (as outras viram observação)
+    const cRastreios = h.map((x, i) => (/^N(RASTREIO|RETORNO)/.test(x) ? i : -1)).filter(i => i >= 0);
+    const antesDaOp = cRastreios.filter(i => cOp < 0 || i < cOp);
+    const cRet = antesDaOp.length ? antesDaOp[antesDaOp.length - 1] : (cRastreios.length ? cRastreios[0] : -1);
+    const cOutrosRastreios = cRastreios.filter(i => i !== cRet);
+    const cMat = [], cMan = [];
+    h.forEach((x, i) => { if (CT_MATERIAIS[x]) cMat.push([i, CT_MATERIAIS[x]]); else if (CT_MANUAIS[x]) cMan.push([i, CT_MANUAIS[x]]); });
+    if (cRef < 0 || cAnual < 0 || cRetKg < 0) { avisos.push(`Aba "${nome}": colunas diferentes do esperado; aba ignorada.`); continue; }
+    const resumo = { aba: nome, ano: +ano, lidas: 0, completadas: 0, novas: 0 };
+
+    for (let r = iCab + 1; r < L.length; r++) {
+      const row = L[r] || [];
+      const data = dataISO(row[cData]);
+      const ref = n(row[cRef]), anual = n(row[cAnual]);
+      if (!data || (ref == null && anual == null)) continue;      // linhas de total / em branco
+      resumo.lidas++;
+      const ligaBruta = txt(row[cLiga]) || txt(row[cTerc]).replace(/\(\s*terceir\w*\s*\)/i, '').trim();
+      const liga = nomeLiga(ligaBruta);
+      const recarga = cRec >= 0 ? (n(row[cRec]) || 0) : 0;
+      const total = cTot >= 0 ? n(row[cTot]) : null;
+      const retorno = cRet >= 0 && txt(row[cRet]) ? acharRetorno(row[cRet]) : '';
+      const relatorio = cRel >= 0 ? txt(row[cRel]) : '';
+      const opsTexto = cOp >= 0 ? txt(row[cOp]) : '';
+      const ct = {
+        aba: nome, linha: r + 1, anual, recarga, total, retorno, relatorio,
+        ops: lerOps(opsTexto).length ? lerOps(opsTexto) : (/^\d+$/.test(opsTexto) ? [opsTexto] : []), opsTexto,
+        dataColeta: cColeta >= 0 ? dataISO(row[cColeta]) : '', dataResultado: cEntrega >= 0 ? dataISO(row[cEntrega]) : '',
+        terceiros: !txt(row[cLiga]) && !!txt(row[cTerc]),
+        outrosRastreios: cOutrosRastreios.map(i => txt(row[i])).filter(Boolean),
+        retornoGerado: relatorio ? (porRelatorio.get(normRel(relatorio)) || '') : '',
+      };
+      if (!ct.retornoGerado && +data.slice(0, 4) >= 2025) {
+        const rg = porRefAnual.get(`${ref}-${anual}`);
+        if (rg && normLiga(nomeLiga(rg.liga)) === normLiga(liga)) ct.retornoGerado = rg.codigo;
+      }
+      if (!ct.outrosRastreios.length) delete ct.outrosRastreios;
+      Object.keys(ct).forEach(k => { if (ct[k] === '' || ct[k] == null || ct[k] === false) delete ct[k]; });
+
+      const existente = acharNoBanco(data, ref, anual, liga, ct.ops || [], total != null ? total - recarga : null, usados);
+      if (existente) {
+        usados.add(existente.id);
+        out.completar.push({ id: existente.id, ct });
+        resumo.completadas++;
+      } else {
+        const materiais = {};
+        for (const [i, id] of cMat) { const kg = n(row[i]); if (kg) materiais[id] = (materiais[id] || 0) + kg; }
+        const manuais = [];
+        for (const [i, desc] of cMan) { const kg = n(row[i]); if (kg) manuais.push({ desc: desc + ' (sem composição)', kg, analise: {} }); }
+        const retKg = n(row[cRetKg]) || 0;
+        const rets = retorno || retKg || recarga ? [{ codigo: retorno || 'Retorno (sem nº na planilha)', kg: retKg, recarga: 0 }] : [];
+        const somaKg = retKg + Object.values(materiais).reduce((s, v) => s + v, 0) + manuais.reduce((s, m) => s + m.kg, 0);
+        let id = `hist-${ano}-${String(anual != null ? anual : 'r' + ref).padStart(3, '0')}`;
+        if (out.novas.some(c => c.id === id)) {
+          let k = 2; while (out.novas.some(c => c.id === `${id}-${k}`)) k++;
+          id = `${id}-${k}`;
+          avisos.push(`${nome}: a corrida anual ${anual} aparece mais de uma vez (linha ${r + 1}).`);
+        }
+        out.novas.push(aplicarControle({
+          id, origem: 'planilha', data, ano: +data.slice(0, 4), refratario: ref, anual, anualInferido: false,
+          liga, ligaPlanilha: ligaBruta, ligaId: normLiga(liga),
+          ops: [], opsTexto: '', carga: Math.round((total != null ? total - recarga : somaKg) * 10) / 10, temperatura: null,
+          retornos: rets, manuais, materiais, estimadoPlanilha: {},
+          real: {}, lab: {}, retornoGerado: '',
+          obs: ct.outrosRastreios ? 'Rastreio na planilha: ' + ct.outrosRastreios.join(', ') : '',
+        }, ct));
+        resumo.novas++;
+      }
+      if (!out.ultima || data > out.ultima.data || (data === out.ultima.data && (anual || 0) > (out.ultima.anual || 0))) out.ultima = { data, anual, refratario: ref };
+    }
+    out.abas.push(resumo);
+  }
+
+  const ligasDesconhecidas = [...new Set(out.novas.filter(c => c.liga && !acharLiga(ligas, c.liga)).map(c => c.ligaPlanilha))];
+  if (ligasDesconhecidas.length) avisos.push('Ligas que não estão no cadastro (entram com o nome da planilha): ' + ligasDesconhecidas.join(', ') + '.');
+  const semLiga = out.novas.filter(c => !c.liga).length;
+  if (semLiga) avisos.push(`${semLiga} corridas sem liga na planilha.`);
+  const todos = [...out.completar.map(x => x.ct), ...out.novas.map(c => c.controle)];
+  out.resumo = {
+    completadas: out.completar.length, novas: out.novas.length,
+    comRecarga: todos.filter(ct => ct.recarga).length,
+    comRelatorio: todos.filter(ct => ct.relatorio).length,
+    ligadasAnalise: todos.filter(ct => ct.retornoGerado).length,
+  };
+  return out;
+}

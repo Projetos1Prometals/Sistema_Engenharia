@@ -58,6 +58,11 @@ No primeiro acesso, o sistema grava sozinho as **28 ligas**, as **sucatas** e as
 Traz as normas das ligas, os retornos (análise, peso, saldo), o histórico de corridas (aba Banco de dados) e os contadores.
 Pode importar quantas vezes quiser; faça a **última importação no dia em que pararem de usar a planilha**, para os saldos baterem.
 
+Depois, **Configurações → Importar a planilha Controle de Corrida** → escolha a `CONTROLE_CORRIDA_ENGENHARIA` (.xlsx).
+Traz o histórico das abas **Controle Corrida 2023, 2024…**: nº anual, recarga, nº do relatório e datas do laboratório. As corridas que já vieram da Calculo de Ligas são só completadas (as datas das duas planilhas às vezes diferem em alguns dias; o sistema casa pelo nº da corrida, OP, liga e carga). As outras entram como histórico, sem composição estimada.
+
+> As planilhas com dados **não** vão para o GitHub (o repositório é público). Deixe-as na pasta `planilhas_dados`, que é ignorada.
+
 ## Como funciona o Cálculo de Liga
 
 - **Corrida**: liga, nº do refratário e nº anual (já vêm preenchidos com o próximo número), data, temperatura, **Corrida PCP (FS)** e **OPs da liga**.

@@ -34,6 +34,21 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - Rastreio = FS, sempre com o prefixo "FS-". Ordem Produção = OPs.
 - Não mudar a ordem nem o layout sem pedido.
 
+### Importação das planilhas (Configurações) — `importar.js`
+- **Calculo de Ligas (.xlsm)** → `lerPlanilha`: ligas, retornos (Dados Retorno), corridas da aba
+  Banco de dados (ids `planilha-NNNN`, nº anual deduzido) e contadores.
+- **CONTROLE_CORRIDA_ENGENHARIA (.xlsx)** → `lerControle`: abas "Controle Corrida AAAA".
+  - "Total Corrida Kg" = carga do forno + recarga; carga importada = total − recarga.
+  - Corrida que já veio da Banco de dados é **completada** (não duplicada): mesmo nº da corrida,
+    até 7 dias de diferença (as datas das planilhas divergem), confirmando por OP, nº anual, liga ou carga.
+    Os dados da Controle ficam em `corrida.controle` e são aplicados por `aplicarControle()` — também
+    ao reimportar a Calculo, para não se perderem.
+  - As outras viram histórico `hist-AAAA-NNN` (sem estimado). Retorno gerado: pelo código
+    "ref-anual-LIGA" do retorno (Dados Retorno não tem nº de relatório).
+  - Cabeçalhos com acento ("N° Relatório"): normalizar com NFD antes do `cab()`.
+- As planilhas ficam em `planilhas_dados/`, que está no `.gitignore`: o repositório é público,
+  **nunca** enviar planilhas para o GitHub.
+
 ## Testes
 Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servidor HTTP simples
 (ex.: `HttpListener` em PowerShell) e usa-se o Chrome headless (`--dump-dom`, `--print-to-pdf`).
