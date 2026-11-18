@@ -4,7 +4,7 @@
 // =====================================================================
 import * as banco from './banco.js';
 
-export const VERSAO = '1.0.0';
+export const VERSAO = '1.1.0';
 
 // ---------- ícones (traço simples, estilo do PCP) ----------
 const P = {

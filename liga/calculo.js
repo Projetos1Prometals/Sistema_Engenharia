@@ -34,6 +34,7 @@ export function mesmaLiga(ligas, a, b) {
 }
 
 // Lista de tudo que entra no forno, com kg e teores.
+// Retorno: só o Solicitado (r.kg) entra; a Recarga (r.recarga) fica fora da carga e da composição.
 export function itensDaCarga(corrida, { materiais, retornosPorCodigo }) {
   const itens = [];
   for (const r of corrida.retornos || []) {
@@ -97,8 +98,14 @@ export function conferir(comp, liga) {
   return fora;
 }
 
+// Quanto uma linha de retorno da corrida tira do saldo: Solicitado (kg, entra no forno)
+// + Recarga (separada pelo forneiro, NÃO entra no forno nem na composição).
+export function baixaDoRetorno(u) {
+  return (+(u && u.kg) || 0) + (+(u && u.recarga) || 0);
+}
+
 // Saldo de cada retorno.
-// saldo = kg verificado − baixa trazida da planilha − kg usados nas corridas do sistema
+// saldo = kg verificado − baixa trazida da planilha − (solicitado + recarga) das corridas do sistema
 // (corridas importadas da planilha não contam, porque a baixa delas já veio na coluna "Utilizado")
 export function saldos(retornos, corridas) {
   const mapa = new Map();
@@ -108,11 +115,12 @@ export function saldos(retornos, corridas) {
   for (const c of corridas) {
     if (c.origem === 'planilha') continue;
     for (const u of c.retornos || []) {
-      if (!u.codigo || !(+u.kg)) continue;
+      const baixa = baixaDoRetorno(u);
+      if (!u.codigo || !baixa) continue;
       let s = mapa.get(u.codigo);
       if (!s) { s = { verificado: 0, baixaPlanilha: 0, usado: 0, usos: [], semCadastro: true }; mapa.set(u.codigo, s); }
-      s.usado += +u.kg;
-      s.usos.push({ corridaId: c.id, kg: +u.kg, numero: numeroCorrida(c), data: c.data });
+      s.usado += baixa;
+      s.usos.push({ corridaId: c.id, kg: +u.kg || 0, recarga: +u.recarga || 0, numero: numeroCorrida(c), data: c.data });
     }
   }
   for (const s of mapa.values()) s.saldo = Math.round((s.verificado - s.baixaPlanilha - s.usado) * 10) / 10;

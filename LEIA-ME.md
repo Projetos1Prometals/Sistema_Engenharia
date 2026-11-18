@@ -62,9 +62,9 @@ Pode importar quantas vezes quiser; faça a **última importação no dia em que
 
 - **Corrida**: liga, nº do refratário e nº anual (já vêm preenchidos com o próximo número), data, temperatura, **Corrida PCP (FS)** e **OPs da liga**.
   Escolha os retornos (só aparecem os que têm saldo, primeiro os da mesma liga), as sucatas e os elementos de liga. O peso da carga e a composição estimada aparecem na hora, comparados com a norma (**BAIXO / OK / ALTO**, como na planilha).
-- **Retorno usado em parte**: ao escolher o retorno, o kg vem com o saldo inteiro; mude para o que vai usar e o resto continua no saldo.
+- **Retorno: Solicitado e Recarga**: ao escolher o retorno, o **Solicitado** vem com o saldo disponível. Se o forneiro separar uma **Recarga**, digite-a: o Solicitado vira (disponível − recarga), a não ser que você já tenha mudado o Solicitado à mão. Só o Solicitado entra na carga do forno e na composição; o saldo do retorno baixa Solicitado + Recarga (ex.: 370 kg, recarga 80 → 290 no forno, saldo 0). Se os dois juntos passarem do saldo, aparece um aviso em vermelho.
 - **Entrada manual**: material que não está no cadastro (forma perdida, retorno sem análise), com kg e composição.
-- **Imprimir boletim**: folha A4 para separar o material, com os códigos MP do NW e a coluna de recarga para preencher à mão.
+- **Imprimir boletim**: a mesma folha "Boletim de Corrida" da planilha, em uma página A4: dados de produção, carga metálica (Elemento / Solicitado / Recarga, com os códigos MP do NW) e as 12 linhas de ligas sempre na mesma ordem.
 - **Laboratório**: o resultado real da corrida fica ao lado do estimado. O botão **Gerar retorno desta corrida** cria o retorno (ex.: `64-257-CRK`) já com a análise; o peso pode ser informado depois, na tela Retornos.
 - **Ligação futura com o PCP**: cada corrida guarda a **FS** e as **OPs**; nas próximas etapas, a Instrução de Processo vai usar o **código do produto**.
 

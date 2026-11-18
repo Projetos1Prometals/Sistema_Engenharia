@@ -7,8 +7,8 @@ import * as banco from '../comum/banco.js';
 import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo } from '../comum/casca.js';
 import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
-  codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga,
-} from './calculo.js';
+  codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno,
+} from './calculo.js?v=1.1.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha } from './importar.js';
 
@@ -219,14 +219,19 @@ function rascunhoNovo() {
   return {
     data: hoje(), anual: maxAnual + 1, refratario: (+c.refratario || 0) + 1,
     liga: '', fs: '', opsTexto: '', temperatura: '',
-    retornos: [{ codigo: '', kg: '' }], manuais: [], materiais: {},
+    retornos: [linhaRetVazia()], manuais: [], materiais: {},
     real: {}, lab: {}, obs: '', retornoGerado: '',
   };
 }
+// Linha de retorno da corrida: kg = Solicitado (entra no forno), recarga = separada (só baixa o saldo).
+// solManual (só no rascunho, não é salvo) = o Solicitado foi digitado à mão, não recalcular sozinho.
+function linhaRetVazia() { return { codigo: '', kg: '', recarga: '', solManual: false }; }
+const numEntrada = v => String(Math.round(v * 10) / 10).replace('.', ',');
 function rascunhoDe(c) {
   const d = JSON.parse(JSON.stringify(c));
   d.opsTexto = (c.ops || []).join(', ') || c.opsTexto || '';
-  d.retornos = d.retornos && d.retornos.length ? d.retornos : [{ codigo: '', kg: '' }];
+  d.retornos = d.retornos && d.retornos.length ? d.retornos : [linhaRetVazia()];
+  d.retornos.forEach(r => { if (r.recarga == null) r.recarga = ''; });
   d.manuais = d.manuais || []; d.materiais = d.materiais || {}; d.real = d.real || {}; d.lab = d.lab || {};
   return d;
 }
@@ -239,7 +244,8 @@ function normalizar(d) {
     ...d,
     anual: num(d.anual), refratario: num(d.refratario), temperatura: num(d.temperatura),
     ops: lerOps(d.opsTexto),
-    retornos: (d.retornos || []).filter(r => r.codigo || num(r.kg)).map(r => ({ codigo: r.codigo, kg: num(r.kg) || 0 })),
+    retornos: (d.retornos || []).filter(r => r.codigo || num(r.kg) || num(r.recarga))
+      .map(r => ({ codigo: r.codigo, kg: num(r.kg) || 0, recarga: num(r.recarga) || 0 })),
     manuais: (d.manuais || []).filter(m => m.desc || num(m.kg)).map(m => ({ desc: m.desc || '', kg: num(m.kg) || 0, analise: analise(m.analise) })),
     materiais: mats,
     real: analise(d.real),
@@ -254,6 +260,11 @@ function paginaCorrida(id) {
   const ed = editor = { id: orig ? orig.id : null, d: orig ? rascunhoDe(orig) : rascunhoNovo(), sujo: false, importada: orig && orig.origem === 'planilha' };
   const d = ed.d;
   definirTrilha(['Cálculo de Liga', 'Corridas', orig ? 'Corrida ' + numeroCorrida(orig) : 'Nova corrida']);
+  // Corrida salva: o Solicitado conta como "digitado à mão" se não for igual a (disponível − recarga)
+  d.retornos.forEach(r => {
+    if (r.solManual != null) return;
+    r.solManual = !!r.codigo && Math.abs((num(r.kg) || 0) - Math.max(0, disponivel(r.codigo) - (num(r.recarga) || 0))) > 0.05;
+  });
 
   C.innerHTML = `
     <div class="cab nao-imprimir">
@@ -311,13 +322,21 @@ function paginaCorrida(id) {
       const i = +t.dataset.ret, r = d.retornos[i];
       if (t.dataset.k === 'codigo') {
         r.codigo = t.value;
-        if (e.type === 'change' && t.value && !num(r.kg)) {
-          const s = S.saldos.get(t.value);
-          const jaUsado = usoOriginal(t.value);
-          if (s) r.kg = String(Math.max(0, s.saldo + jaUsado)).replace('.', ',');
-        }
+        // Ao escolher o retorno, o Solicitado vem com o disponível (menos a recarga, se já digitada)
+        if (e.type === 'change' && t.value && !r.solManual && S.saldos.has(t.value)) solicitadoAutomatico(r);
         if (e.type === 'change') montarRetornos();
-      } else r.kg = t.value;
+      } else if (t.dataset.k === 'recarga') {
+        r.recarga = t.value;
+        // Solicitado = disponível − recarga, a não ser que o Solicitado tenha sido mudado à mão
+        if (r.codigo && !r.solManual) {
+          solicitadoAutomatico(r);
+          const campo = ficha.querySelector(`[data-ret="${i}"][data-k="kg"]`);
+          if (campo) campo.value = r.kg;
+        }
+      } else {
+        r.kg = t.value;
+        r.solManual = t.value.trim() !== '';   // apagou o Solicitado → volta a ser automático
+      }
     } else if (t.dataset.mat) {
       d.materiais[t.dataset.mat] = t.value;
     } else if (t.dataset.man != null) {
@@ -334,12 +353,12 @@ function paginaCorrida(id) {
   ficha.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.dataset.delRet != null) { d.retornos.splice(+b.dataset.delRet, 1); if (!d.retornos.length) d.retornos.push({ codigo: '', kg: '' }); montarRetornos(); marcarSujo(); atualizarContas(); }
+    if (b.dataset.delRet != null) { d.retornos.splice(+b.dataset.delRet, 1); if (!d.retornos.length) d.retornos.push(linhaRetVazia()); montarRetornos(); marcarSujo(); atualizarContas(); }
     if (b.dataset.delMan != null) { d.manuais.splice(+b.dataset.delMan, 1); montarManuais(); marcarSujo(); atualizarContas(); }
     if (b.id === 'btGerarRet') gerarRetorno();
     if (b.id === 'btCopiarEst') { for (const e2 of ELEMENTOS) { const v = calcAtual().estimado[e2]; if (v) d.real[e2] = fmt(v, 2); } montarLab(); marcarSujo(); atualizarContas(); }
   });
-  C.querySelector('#btAddRet').onclick = () => { d.retornos.push({ codigo: '', kg: '' }); montarRetornos(); };
+  C.querySelector('#btAddRet').onclick = () => { d.retornos.push(linhaRetVazia()); montarRetornos(); };
   C.querySelector('#btAddMan').onclick = () => { d.manuais.push({ desc: '', kg: '', analise: {} }); montarManuais(); };
   C.querySelector('#btSalvar').onclick = salvarCorrida;
   C.querySelector('#btBoletim').onclick = () => { atualizarContas(); window.print(); };
@@ -351,10 +370,18 @@ function paginaCorrida(id) {
     C.querySelector('#tituloCorrida').textContent = (ed.id ? 'Corrida ' : 'Nova corrida ') + numeroCorrida(normalizar(d)) + (ed.sujo ? ' •' : '');
     C.querySelector('#subCorrida').textContent = ed.sujo ? 'Alterações não salvas' : (orig && orig._em ? 'Salva em ' + new Date(orig._em).toLocaleString('pt-BR') + (orig._por ? ' por ' + orig._por : '') : 'Preencha os dados e clique em Salvar corrida');
   }
-  // kg que esta corrida já usava do retorno (para não contar duas vezes no saldo ao editar)
+  // kg que esta corrida já tirava do retorno (solicitado + recarga), para não contar duas vezes ao editar
   function usoOriginal(codigo) {
     if (!orig || orig.origem === 'planilha') return 0;
-    return (orig.retornos || []).filter(r => r.codigo === codigo).reduce((s, r) => s + (+r.kg || 0), 0);
+    return (orig.retornos || []).filter(r => r.codigo === codigo).reduce((s, r) => s + baixaDoRetorno(r), 0);
+  }
+  // Quanto do retorno esta corrida pode usar (saldo atual + o que ela mesma já tinha tirado)
+  function disponivel(codigo) {
+    const s = S.saldos.get(codigo);
+    return (s ? s.saldo : 0) + usoOriginal(codigo);
+  }
+  function solicitadoAutomatico(r) {
+    r.kg = numEntrada(Math.max(0, disponivel(r.codigo) - (num(r.recarga) || 0)));
   }
   function calcAtual() {
     return calcular(normalizar(d), { materiais: S.materiais, retornosPorCodigo: S.retPorCod });
@@ -365,14 +392,12 @@ function paginaCorrida(id) {
   function montarRetornos() {
     const box = C.querySelector('#boxRetornos');
     const ligaAtual = d.liga;
-    const disponiveis = S.retornos.map(r => {
-      const s = S.saldos.get(r.codigo) || { saldo: 0 };
-      return { r, saldo: s.saldo + usoOriginal(r.codigo) };
-    }).filter(x => x.saldo > 0.05 || d.retornos.some(u => u.codigo === x.r.codigo));
+    const disponiveis = S.retornos.map(r => ({ r, saldo: disponivel(r.codigo) }))
+      .filter(x => x.saldo > 0.05 || d.retornos.some(u => u.codigo === x.r.codigo));
     const mesma = disponiveis.filter(x => ligaAtual && mesmaLiga(S.ligas, x.r.liga, ligaAtual));
     const outras = disponiveis.filter(x => !mesma.includes(x));
     const opt = (x, sel) => `<option value="${esc(x.r.codigo)}" ${sel === x.r.codigo ? 'selected' : ''}>${esc(x.r.codigo)} — ${fmtKg(x.saldo)} kg</option>`;
-    box.innerHTML = d.retornos.map((u, i) => {
+    box.innerHTML = `<div class="linha-ret cab-ret"><span>Retorno</span><span>Solicitado (kg)</span><span>Recarga (kg)</span><span></span></div>` + d.retornos.map((u, i) => {
       const conhecido = !u.codigo || S.retPorCod.has(u.codigo);
       return `<div class="linha-ret">
         <select class="ent" data-ret="${i}" data-k="codigo">
@@ -381,7 +406,8 @@ function paginaCorrida(id) {
           ${mesma.length ? `<optgroup label="Mesma liga (${esc(ligaAtual)})">${mesma.map(x => opt(x, u.codigo)).join('')}</optgroup>` : ''}
           ${outras.length ? `<optgroup label="${ligaAtual ? 'Outras ligas' : 'Retornos com saldo'}">${outras.map(x => opt(x, u.codigo)).join('')}</optgroup>` : ''}
         </select>
-        ${entNum(`data-ret="${i}" data-k="kg" placeholder="kg" style="width:110px"`, u.kg)}
+        ${entNum(`data-ret="${i}" data-k="kg" placeholder="solicitado" title="Solicitado (kg): entra no forno e na composição"`, u.kg)}
+        ${entNum(`data-ret="${i}" data-k="recarga" placeholder="recarga" title="Recarga (kg): separada pelo forneiro; não entra no forno, mas sai do saldo"`, u.recarga)}
         <button class="botao-ic" data-del-ret="${i}" title="Tirar este retorno">${icone('lixo')}</button>
         <div class="ret-info" id="retInfo${i}"></div>
       </div>`;
@@ -455,20 +481,25 @@ function paginaCorrida(id) {
 
     // Avisos sobre os retornos
     const avisos = [];
-    n.retornos.forEach((u, i) => {
+    d.retornos.map(r => ({ codigo: r.codigo, kg: num(r.kg) || 0, recarga: num(r.recarga) || 0 })).forEach((u, i) => {
       const info = C.querySelector('#retInfo' + i);
       if (!info) return;
       const r = S.retPorCod.get(u.codigo);
       if (!u.codigo) { info.innerHTML = ''; return; }
-      const s = S.saldos.get(u.codigo) || { saldo: 0 };
-      const disp = s.saldo + usoOriginal(u.codigo);
+      const disp = disponivel(u.codigo);
+      const baixa = baixaDoRetorno(u);
       const partes = [];
       if (r && temAnalise(r.analise)) partes.push(['C', 'Si', 'Cr', 'Ni', 'Mo'].filter(e => r.analise[e] != null).map(e => `${e} ${fmtComp(r.analise[e])}`).join(' · '));
       else partes.push('<span class="txt-amar">sem análise do laboratório</span>');
       if (!ed.importada) {
         partes.push(`disponível ${fmtKg(disp)} kg`);
-        if (u.kg > disp + 0.05) partes.push(`<span class="txt-verm">usando mais que o saldo</span>`);
-        else if (u.kg && disp - u.kg > 0.05) partes.push(`<span class="txt-az">sobram ${fmtKg(disp - u.kg)} kg</span>`);
+        if (u.recarga) partes.push(`recarga ${fmtKg(u.recarga)} kg fora do forno`);
+        if (baixa > disp + 0.05) {
+          const txt = u.recarga ? `solicitado + recarga (${fmtKg(baixa)} kg) passam do saldo em ${fmtKg(baixa - disp)} kg` : 'usando mais que o saldo';
+          partes.push(`<span class="txt-verm">${txt}</span>`);
+          avisos.push(`<span class="txt-verm">Retorno ${esc(u.codigo)}: ${txt}.</span>`);
+        } else if (baixa && disp - baixa > 0.05) partes.push(`<span class="txt-az">sobram ${fmtKg(disp - baixa)} kg</span>`);
+        else if (baixa) partes.push('saldo zera');
       }
       if (r && d.liga && !mesmaLiga(S.ligas, r.liga, d.liga)) partes.push(`<span class="txt-amar">retorno de outra liga (${esc(r.liga)})</span>`);
       info.innerHTML = partes.join(' · ');
@@ -568,36 +599,113 @@ function paginaCorrida(id) {
 
 function semMeta(o) { const x = { ...o }; delete x.id; delete x._em; delete x._por; return x; }
 
-// ---------- boletim de corrida (folha impressa para separar o material) ----------
+// ---------- boletim de corrida (folha impressa, com a mesma cara da folha da planilha) ----------
+// As 12 linhas de "Ligas" ficam sempre na mesma ordem da planilha, com "-" quando não usadas,
+// para o forneiro achar cada elemento sempre no mesmo lugar. À direita, a legenda dos códigos MP do NW.
+const BOL_LIGAS = [
+  { id: 'fesi', nome: 'Fe Si', sim: 'Si' },
+  { id: 'fecr_ac', nome: 'Cr A/C', sim: 'Cr A/C' },
+  { id: 'femn_ac', nome: 'Fe Mn A/C', sim: 'Mn', extra: 'femn_bc' },
+  { id: 'femo', nome: 'Fe Mo', sim: 'Mo' },
+  { id: 'fenb', nome: 'Fe Nb', sim: 'Nb' },
+  { id: 'fecr_bc', nome: 'Cr B/C', sim: 'Cr B/C' },
+  { id: 'fev', nome: 'Fe V', sim: 'V' },
+  { id: 'cu', nome: 'Cobre', sim: 'Cu' },
+  { id: 'grafite', nome: 'Grafite', sim: 'Grafite' },
+  { id: 'ni', nome: 'Níquel', sim: 'Ni' },
+  { id: 'feti', nome: 'Titânio', sim: 'Ti' },
+  { id: 'few', nome: 'Tungstênio', sim: 'W' },
+];
+const BOL_MNBC = 'femn_bc';   // Fe Mn B/C sai como "MN B/C" na área da sucata, como na planilha
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const dataBoletim = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[3]}-${MESES[+m[2] - 1]}-${m[1].slice(2)}` : ''; };
+const fmtQtd = v => (!+v ? '' : Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 }));
+
 function htmlBoletim(n, calc, liga, est, carga) {
   const faixas = (liga && liga.faixas) || {};
-  const linhasRet = n.retornos.filter(r => r.codigo || r.kg).map(r => `<tr><td>${esc(r.codigo)}</td><td class="dir">${fmtKg(r.kg)}</td><td></td><td></td></tr>`).join('');
-  const linhasMan = n.manuais.map(m => `<tr><td>${esc(m.desc)}</td><td class="dir">${fmtKg(m.kg)}</td><td></td><td></td></tr>`).join('');
-  const linhasMat = lista => lista.filter(m => n.materiais[m.id]).map(m => `<tr><td>${esc(m.nome)}</td><td class="dir">${fmtKg(n.materiais[m.id])}</td><td>${esc(m.mp || '')}</td><td></td></tr>`).join('');
-  const comp = (rot, fonte, zeroVazio) => `<tr><td><b>${rot}</b></td>${ELEMENTOS.map(e => `<td>${fonte[e] == null || fonte[e] === '' || (zeroVazio && Math.abs(fonte[e]) < 0.005) ? '' : fmtComp(fonte[e])}</td>`).join('')}</tr>`;
-  const min = {}, max = {};
-  ELEMENTOS.forEach(e => { if (faixas[e]) { min[e] = faixas[e][0]; max[e] = faixas[e][1]; } });
-  const tabelaMat = (titulo, corpo) => corpo ? `<h3>${titulo}</h3><table><thead><tr><th>Material</th><th class="dir" style="width:22%">Solicitado (kg)</th><th style="width:22%">Cód. MP NW</th><th style="width:22%">Recarga / real (kg)</th></tr></thead><tbody>${corpo}</tbody></table>` : '';
+  const nomeLiga = liga ? liga.nome : (n.liga || '');
+  const mpDe = id => ((S.materiais.find(m => m.id === id) || {}).mp || '');
+  const vazia = () => ({ elem: '', sol: '', rec: '' });
+  const completar = (lista, minimo) => { while (lista.length < minimo) lista.push(vazia()); return lista; };
+
+  // --- Retorno <liga>: retornos (Solicitado + Recarga) e entradas manuais ---
+  const ret = completar([
+    ...n.retornos.map(r => ({ elem: esc(r.codigo), sol: fmtQtd(r.kg), rec: fmtQtd(r.recarga) })),
+    ...n.manuais.map(m => ({ elem: esc(m.desc), sol: fmtQtd(m.kg), rec: '' })),
+  ], 3);
+
+  // --- Sucata: as usadas, linhas em branco, e "MN B/C" sempre na última linha ---
+  const legSuc = sucatas().filter(m => m.ativo !== false || n.materiais[m.id])
+    .map(m => ({ a: esc(m.nome.replace(/^SAE\s*/i, '')), b: esc(m.mp || '') }));
+  const suc = completar(sucatas().filter(m => n.materiais[m.id]).map(m => ({ elem: esc(m.nome), sol: fmtQtd(n.materiais[m.id]), rec: '' })),
+    Math.max(4, legSuc.length - 1));
+  suc.push({ elem: 'MN B/C', sol: fmtQtd(n.materiais[BOL_MNBC]), rec: '' });
+  suc.forEach((r, i) => Object.assign(r, legSuc[i] || {}));
+
+  // --- Ligas: 12 linhas fixas na ordem da planilha (+ alguma ferroliga nova do cadastro, se usada) ---
+  const fixas = new Set([...BOL_LIGAS.map(x => x.id), BOL_MNBC]);
+  const lig = BOL_LIGAS.map((x, i) => {
+    const kg = n.materiais[x.id];
+    return {
+      num: i + 1, elem: kg ? x.nome : '-', sol: fmtQtd(kg), rec: '', usado: !!kg,
+      a: x.sim, b: esc(mpDe(x.id)), c: x.extra && mpDe(x.extra) ? 'MN B/C ' + esc(mpDe(x.extra)) : '',
+    };
+  });
+  ferroligas().filter(m => !fixas.has(m.id) && n.materiais[m.id]).forEach(m => lig.push({
+    num: lig.length + 1, elem: esc(m.nome), sol: fmtQtd(n.materiais[m.id]), rec: '', usado: true, a: esc(m.nome), b: esc(m.mp || ''),
+  }));
+
+  const grupo = (rotulo, linhas) => linhas.map((r, i) => `<tr class="${i === 0 ? 'bol-ini' : ''}">
+      ${i === 0 ? `<th class="bol-grupo" rowspan="${linhas.length}">${rotulo}</th>` : ''}
+      ${r.num != null ? `<td class="bol-n">${r.num}</td><td>${r.elem}</td>` : `<td colspan="2" class="cen">${r.elem}</td>`}
+      <td class="cen">${r.sol}</td><td class="cen">${r.rec}</td>
+      <td class="bol-leg">${r.a || ''}</td><td class="bol-leg bol-mp">${r.b || ''}</td><td class="bol-leg bol-ult">${r.c || ''}</td>
+    </tr>`).join('');
+
+  const celComp = v => `<td>${v}</td>`;
+  const cabComp = cls => `<tr class="${cls}">${ELEMENTOS.map(e => `<th>${e}</th>`).join('')}</tr>`;
+  const real = temAnalise(n.real) ? n.real : null;
+
   return `<div class="bol">
-    <div class="bol-topo"><img src="${banco.raiz('comum/logo.png')}" alt=""><div><h2>Boletim de Corrida</h2><small>Prometals · Engenharia</small></div><div class="bol-data">Impresso em ${new Date().toLocaleString('pt-BR')}</div></div>
-    <div class="bol-dados">
-      <div><span>Corrida (refratário / anual)</span><b>${esc(numeroCorrida(n))}</b></div>
-      <div><span>Data</span><b>${fmtData(n.data)}</b></div>
-      <div><span>Liga</span><b>${esc(n.liga || '')}</b></div>
-      <div><span>Temperatura</span><b>${n.temperatura ? esc(n.temperatura) + ' °C' : ''}</b></div>
-      <div><span>Carga do forno</span><b>${fmtKg(carga)} kg</b></div>
-      <div><span>Corrida PCP (FS)</span><b>${esc(n.fs || '')}</b></div>
-      <div class="larga"><span>OPs</span><b>${esc((n.ops || []).join(', '))}</b></div>
-    </div>
-    ${tabelaMat('Retornos', linhasRet + linhasMan)}
-    ${tabelaMat('Sucatas', linhasMat(sucatas()))}
-    ${tabelaMat('Elementos de liga', linhasMat(ferroligas()))}
-    <h3>Composição química — ${esc(n.liga || '')}</h3>
-    <table class="bol-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th>${e}</th>`).join('')}</tr></thead><tbody>
-      ${comp('Mínimo', min)}${comp('Máximo', max)}${comp('Estimado', est || {}, true)}${temAnalise(n.real) ? comp('Real', n.real, true) : ''}
-    </tbody></table>
-    <h3>Observações</h3><div class="bol-obs">${esc(n.obs || '')}</div>
-    <div class="bol-ass"><div>Forneiro</div><div>Op. seg.</div><div>Engenharia</div></div>
+    <table class="bol-tab bol-topo"><colgroup><col style="width:18%"><col></colgroup><tr>
+      <td class="bol-logo"><img src="${banco.raiz('comum/logo.png')}" alt="Prometals"></td>
+      <td class="bol-titulo">Boletim de Corrida</td>
+    </tr></table>
+
+    <div class="bol-faixa">Dados de Produção:</div>
+    <table class="bol-tab bol-dados">
+      <colgroup><col style="width:17%"><col style="width:13%"><col style="width:14%"><col style="width:17%"><col style="width:16%"><col style="width:10%"><col style="width:13%"></colgroup>
+      <tr><th rowspan="2">Nº Corrida</th><th class="claro">Refratário</th><th class="claro">Anual</th><th class="claro">Ordem Produção</th>
+        <td class="cen">${esc((n.ops || []).join(', '))}</td><th rowspan="2">DATA:</th><td rowspan="2" class="cen">${dataBoletim(n.data)}</td></tr>
+      <tr><td colspan="2" class="cen"><b>${esc(numeroCorrida(n))}</b></td><th class="claro">Rastreio:</th><td class="cen">${esc(n.fs || '--')}</td></tr>
+    </table>
+    <table class="bol-tab bol-dados bol-sep">
+      <colgroup><col style="width:17%"><col style="width:27%"><col style="width:17%"><col style="width:16%"><col style="width:10%"><col style="width:13%"></colgroup>
+      <tr><th>Liga:</th><td class="cen">${esc(nomeLiga)}</td><th>Carga_Forno:</th><td class="cen">${fmtKg(carga) || '0'} Kg.</td>
+        <th>Temp.</th><td class="cen">${n.temperatura ? esc(n.temperatura) : ''}</td></tr>
+    </table>
+
+    <div class="bol-faixa bol-sep">Carga Metálica:</div>
+    <table class="bol-tab bol-carga">
+      <colgroup><col style="width:10%"><col style="width:5%"><col style="width:17%"><col style="width:14%"><col style="width:14%"><col style="width:10%"><col style="width:13%"><col style="width:17%"></colgroup>
+      <tr class="bol-cab"><th></th><th colspan="2">Elemento.</th><th class="grande">Solicitado.</th><th class="grande">Recarga</th>
+        <th class="bol-leg"></th><th class="bol-leg bol-codcab">Cód MP NW</th><th class="bol-leg bol-ult"></th></tr>
+      ${grupo('Retorno<br>' + esc(nomeLiga), ret)}
+      ${grupo('Sucata', suc)}
+      ${grupo('Ligas', lig)}
+    </table>
+
+    <table class="bol-tab bol-comp">
+      <tr><th colspan="${ELEMENTOS.length}" class="bol-faixa-p">COMPOSIÇÃO QUÍMICA ${esc(nomeLiga)}</th></tr>
+      ${cabComp('cinza')}
+      <tr>${ELEMENTOS.map(e => celComp(faixas[e] ? fmtComp(faixas[e][0]) || '0,00' : '')).join('')}</tr>
+      <tr>${ELEMENTOS.map(e => celComp(faixas[e] && faixas[e][1] != null && faixas[e][1] !== '' ? fmtComp(faixas[e][1]) : '')).join('')}</tr>
+      <tr><th colspan="${ELEMENTOS.length}" class="bol-faixa-p">COMPOSIÇÃO QUÍMICA (ESTIMADA / REAL).</th></tr>
+      ${cabComp('azul')}
+      <tr>${ELEMENTOS.map(e => celComp(fmt((est || {})[e] || 0, 2))).join('')}</tr>
+      <tr>${ELEMENTOS.map(e => celComp(real && real[e] != null ? fmtComp(real[e]) : '')).join('')}</tr>
+    </table>
+    ${n.obs ? `<table class="bol-tab bol-sep"><tr><th style="width:17%">Observações</th><td>${esc(n.obs)}</td></tr></table>` : ''}
   </div>`;
 }
 
@@ -688,8 +796,8 @@ function editarRetorno(r) {
       <div class="tab-wrap"><table class="tab tab-comp"><thead><tr>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead>
         <tbody><tr>${ELEMENTOS.map(e => `<td>${entNum(`data-el="${e}"`, (r.analise || {})[e])}</td>`).join('')}</tr></tbody></table></div>
       <label class="campo" style="margin-top:12px">Observações<textarea class="ent" id="rObs">${esc(r.obs || '')}</textarea></label>
-      ${!novo ? `<h4 style="margin:16px 0 6px">Uso nas corridas</h4>${s.usos.length ? `<table class="tab"><thead><tr><th>Corrida</th><th>Data</th><th class="dir">Kg</th></tr></thead><tbody>
-        ${s.usos.map(u => `<tr><td><a href="#/corrida/${encodeURIComponent(u.corridaId)}">${esc(u.numero)}</a></td><td>${fmtData(u.data)}</td><td class="dir num">${fmtKg(u.kg)}</td></tr>`).join('')}</tbody></table>` : '<p class="mut">Ainda não usado em corridas do sistema.</p>'}
+      ${!novo ? `<h4 style="margin:16px 0 6px">Uso nas corridas</h4>${s.usos.length ? `<table class="tab"><thead><tr><th>Corrida</th><th>Data</th><th class="dir">Solicitado (kg)</th><th class="dir">Recarga (kg)</th></tr></thead><tbody>
+        ${s.usos.map(u => `<tr><td><a href="#/corrida/${encodeURIComponent(u.corridaId)}">${esc(u.numero)}</a></td><td>${fmtData(u.data)}</td><td class="dir num">${fmtKg(u.kg)}</td><td class="dir num">${u.recarga ? fmtKg(u.recarga) : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="mut">Ainda não usado em corridas do sistema.</p>'}
         <p><b>Saldo: ${fmtKg(s.saldo)} kg</b></p>` : ''}`,
     botoes: [
       ...(!novo ? [{ texto: icone('lixo') + ' Excluir', cls: 'perigo', esquerda: true, acao: () => {
