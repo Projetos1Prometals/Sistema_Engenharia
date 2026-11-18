@@ -1,0 +1,109 @@
+/* =====================================================================
+   certificados/certificados.css — telas dos Certificados e a folha A4
+   A folha (.cert) é a mesma do app antigo / da planilha: 12 colunas, Arial,
+   barras cinza, faixa laranja. Fica sempre em fundo branco, também no tema escuro.
+   ===================================================================== */
+.txt-verm{color:var(--verm)} .txt-amar{color:var(--amar)} .txt-verde{color:var(--verde)}
+
+/* ---------- busca ---------- */
+.busca.grande input{font-size:16px;padding:11px 12px 11px 38px}
+.resbox{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--linha2);font-size:13.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.resbox.ocioso{color:var(--mut)}
+.resbox .chip{display:inline-flex;flex-direction:column;align-items:flex-start;padding:4px 10px;border-radius:8px;border:1px solid var(--lar);background:var(--lar-bg);color:var(--txt);font-weight:700;font-size:13px;cursor:pointer}
+.resbox .chip small{font-weight:500;color:var(--mut);font-size:10.5px}
+.resbox .qtd{margin-left:auto;color:var(--mut);font-size:12px}
+.tab-cert td.ops{max-width:260px;white-space:normal}
+.tab-cert td.cli{max-width:220px;white-space:normal}
+.tab-cert th.ck,.tab-cert td.ck{width:30px}
+.tab-cert tr.hit td{background:var(--lar-bg)}
+
+/* ---------- editor ---------- */
+input.ent.aba{font-size:18px;font-weight:800;padding:6px 10px}
+.editor-cert{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:1250px){.editor-cert{grid-template-columns:1fr}}
+.papel-wrap{overflow-x:auto;padding-bottom:6px}
+.papel{width:max-content;margin:0 auto;background:#fff;padding:24px;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.lado .cartao h2 .pilula{margin-left:6px;text-transform:none;letter-spacing:0;font-weight:600}
+.lado .opcao{display:flex;gap:8px;align-items:center;margin-bottom:8px;cursor:pointer}
+.spec ul{list-style:none;padding:0;margin:6px 0 0}
+.spec li{display:flex;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;background:var(--amar-bg);margin-bottom:4px;font-size:12.5px}
+.spec li.inv{background:var(--verm-bg)}
+.spec li span{color:var(--mut)}
+.dicas{margin:0;padding-left:18px;font-size:12.5px;color:var(--mut);line-height:1.6}
+kbd{font:600 11px Consolas,monospace;border:1px solid var(--linha2);border-radius:4px;padding:0 4px;background:var(--card2)}
+.assin{width:260px;height:64px;border:1px dashed var(--linha2);border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}
+.assin img{max-width:100%;max-height:100%;mix-blend-mode:multiply}
+
+/* campos editáveis na folha (só na tela) */
+.editing [data-f][contenteditable]{cursor:text;outline:none;transition:box-shadow .08s}
+.editing [data-f][contenteditable]:hover{box-shadow:inset 0 0 0 1px rgba(226,98,44,.55)}
+.editing [data-f][contenteditable]:focus{box-shadow:inset 0 0 0 2px #E2622C}
+.editing [data-f][contenteditable]:empty::before{content:attr(data-ph);color:#b9b4ab;font-style:italic;font-weight:400}
+.editing td.oos{box-shadow:inset 0 0 0 2px #e08a00!important;background:#fff4e0!important;font-weight:700}
+.editing td.inv{box-shadow:inset 0 0 0 2px #d93025!important;color:#d93025;font-weight:700}
+.editing .prods{padding-bottom:30px}
+.editing .prod,.editing .plw{position:relative}
+.ptools{position:absolute;right:4px;top:3px;display:none;gap:4px;z-index:3}
+.editing .prod:hover .ptools,.editing .prod:focus-within .ptools{display:flex}
+.ptools button,.padd,.px{font:600 11.5px "Segoe UI",system-ui,sans-serif;border:1px solid #efc9b3;background:#fff;color:#b5451b;border-radius:5px;padding:2px 8px;line-height:1.5;cursor:pointer}
+.ptools button:hover,.padd:hover,.px:hover{background:#fdeee5}
+.ptools button.del{color:#d93025;border-color:#ebc0bd}
+.padd{position:absolute;left:6px;bottom:5px}
+.px{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:none;padding:0 7px;font-size:14px}
+.editing .plw:hover .px{display:block}
+.cert .qtog{text-align:right;padding:0 4px;border-left-color:#6E6E6E}
+.qtog button,.qoffw button{font:600 11px "Segoe UI",system-ui,sans-serif;border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:4px;padding:1px 9px;line-height:1.5;cursor:pointer}
+.qtog button:hover{background:rgba(255,255,255,.16)}
+.cert .qoff td{padding:6px 0}
+.qoffw{border:1.5px dashed #c9c5bd;border-radius:6px;padding:8px 12px;font:12.5px "Segoe UI",system-ui,sans-serif;color:#6b6b6b;display:flex;align-items:center;gap:12px;justify-content:space-between;white-space:normal;background:#faf9f7}
+.qoffw button{border-color:#efc9b3;color:#b5451b;background:#fff;font-size:12px;padding:3px 10px;white-space:nowrap}
+
+/* ---------- a folha do certificado (igual à planilha: 12 colunas) ---------- */
+.cert{width:792px;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
+.cert col{width:66px}
+.cert td{padding:0 3px;vertical-align:middle;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.15;font-size:9pt;color:#000}
+.cert .logo{text-align:center;padding:2px 4px}
+.cert .logo img{display:block;max-width:100%;max-height:68px;margin:0 auto}
+.cert .ttl{font-weight:700;font-size:11.5pt;text-align:right}
+.cert .sub{font-style:italic;font-size:9pt;color:#6E6E6E;text-align:right}
+.cert .bar td{background:#E2622C;padding:0;font-size:0;line-height:0}
+.cert .sec{background:#6E6E6E;color:#fff;font-weight:700;font-size:9.5pt;border:1px solid #BFBFBF}
+.cert .lab{background:#EDEDED;color:#6E6E6E;font-weight:700;font-size:8pt;border:1px solid #BFBFBF}
+.cert .val{background:#fff;font-size:9pt;border:1px solid #BFBFBF}
+.cert .c{text-align:center}
+.cert .opl{font-size:10pt}
+.cert .lnk{font-family:Calibri,Carlito,Arial,sans-serif;font-size:11pt;color:#0000FF;text-decoration:underline}
+.cert .prtd{padding:0}
+.cert .prods{background:#FBEDE4;border:2px solid #F79646;min-height:159pt}
+.cert .prod + .prod{border-top:2px solid #F79646}
+.cert .pt,.cert .pl{font-weight:700;font-size:11pt;line-height:14pt;min-height:18pt;padding:2pt 3px}
+.cert .pt{color:#974706}
+.cert .q{background:#D9D9D9;border:1px solid #BFBFBF}
+.cert .qs{font-weight:700;font-size:10pt;text-align:center;vertical-align:bottom;padding-bottom:1px}
+.cert .qn{font-size:6.5pt;color:#595959;text-align:center;vertical-align:top;line-height:1;padding:0 1px}
+.cert .ql{font-weight:700;font-size:8pt}
+.cert .qv{font-size:9pt;text-align:center;padding:0 1px}
+.cert .met{font-style:italic;font-size:7.5pt;color:#6E6E6E}
+.cert .sp td{padding:0;font-size:0;line-height:0}
+.cert .decl{font-size:8pt;border:1px solid #BFBFBF;line-height:1.2;padding:2px 3px}
+.cert .apr{font-weight:700;font-size:8pt;color:#6E6E6E}
+.cert .ana{font-weight:700;font-size:9pt;vertical-align:bottom;padding-bottom:2px}
+.cert .asg{padding:0;vertical-align:bottom}
+.cert .asgw{position:relative;height:25.5pt;font-size:9pt;display:flex;align-items:flex-end;padding:0 3px 2px;white-space:nowrap}
+.cert .sig{position:absolute;left:107px;top:3px;width:162px;height:27px;mix-blend-mode:multiply;pointer-events:none}
+.cert .ft{background:#6E6E6E;color:#fff;text-align:center;border:1px solid #6E6E6E}
+.cert .ftb{font-weight:700;font-size:8.5pt}
+.cert .fts{font-size:7pt}
+
+/* ---------- impressão: só os certificados, uma folha A4 cada ---------- */
+#areaImpressao{position:absolute;left:-20000px;top:0;visibility:hidden}
+#areaImpressao .pagina-cert{width:210mm;height:296mm;padding:19.05mm 6.35mm 0;overflow:hidden;background:#fff}
+@page cert{size:A4 portrait;margin:0}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html,body{background:#fff!important}
+  body.imprimindo-cert > *:not(#areaImpressao){display:none!important}
+  body.imprimindo-cert #areaImpressao{position:static;visibility:visible;left:auto}
+  #areaImpressao .pagina-cert{page:cert;break-after:page}
+  #areaImpressao .pagina-cert:last-child{break-after:auto}
+}

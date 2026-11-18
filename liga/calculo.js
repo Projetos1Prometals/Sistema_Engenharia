@@ -5,6 +5,9 @@
 // =====================================================================
 
 export const ELEMENTOS = ['C', 'Si', 'Mn', 'Cr', 'Ni', 'V', 'Nb', 'Mo', 'S', 'Cu', 'W', 'Ti', 'Al'];
+// Elementos que só aparecem no resultado do laboratório (e no certificado), não no cálculo da carga.
+// ELEMENTOS + ELEMENTOS_LAB_EXTRA = os 20 elementos do certificado de qualidade.
+export const ELEMENTOS_LAB_EXTRA = ['P', 'Co', 'Pb', 'Sn', 'B', 'Mg', 'Fe'];
 
 export const COL = {
   config: 'eng_config',

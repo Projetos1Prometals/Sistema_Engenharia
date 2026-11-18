@@ -67,6 +67,25 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   - `leitor()`: os outros setores, só consulta.
   - Para testar no modo local como outra pessoa: `localStorage.setItem('pmt_simular', '<email>')`.
 
+## Certificados (`certificados/`)
+- `folha.js` (a folha A4 — layout copiado do app antigo / planilha, 12 colunas; não mudar sem pedido),
+  `certificados.js` (telas), `certificados.css`.
+- Coleção `eng_certificados` (id do app antigo mantido na importação); assinatura em `eng_config/certificado`.
+- Editado direto na folha (contenteditable) e **salva sozinho** ~0,7 s depois de parar de digitar.
+- Ligação com o Cálculo de Liga: `corridaId`. Novo certificado a partir da corrida traz corrida ("ref-anual"),
+  material (liga), OP da liga e a **análise do laboratório** (ou do retorno gerado). A conferência usa as
+  faixas de "Ligas e normas" (`eng_ligas`) — o app antigo tinha uma lista própria, que não é importada.
+- Análise do certificado: 20 elementos = `ELEMENTOS` + `ELEMENTOS_LAB_EXTRA` (P, Co, Pb, Sn, B, Mg, Fe),
+  que também aparecem no resultado do laboratório da corrida.
+- Importa o backup .json do app antigo (`{sistema:'certificados-prometals', certs, assinatura}`) e liga
+  sozinho à corrida pelo texto "33-229" (refratário-anual, data mais próxima, até 120 dias).
+- Quem edita: `EDITORES.certificados` (= `editor()` no firestore.rules).
+
+## Instrução de Processo
+- Fica no **Supabase** (app separado); no menu é só um atalho externo. Decisão do usuário, para sobrar
+  espaço no Firebase. As pastas `INSTRUÇÃO DE PROCESSO/` e `certificado-analise-main/` são cópias dos
+  apps antigos só para estudo (estão no `.gitignore`).
+
 ## Testes
 Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servidor HTTP simples
 (ex.: `HttpListener` em PowerShell) e usa-se o Chrome headless (`--dump-dom`, `--print-to-pdf`).

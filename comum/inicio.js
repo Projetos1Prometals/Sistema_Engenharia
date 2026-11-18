@@ -3,7 +3,7 @@
 // =====================================================================
 import * as banco from './banco.js';
 import { montar, icone, esc, aviso, aplicarTema } from './casca.js';
-import { COL, saldos, statusCorrida, acharLiga } from '../liga/calculo.js';
+import { COL, saldos, statusCorrida, acharLiga } from '../liga/calculo.js?v=1.4.0';
 
 aplicarTema();
 const est = await banco.iniciar();
@@ -63,7 +63,7 @@ async function visaoGeral() {
     <div class="modulos">
       <a class="modulo" href="liga/index.html#/corridas">${icone('chama')}<h3>Cálculo de Liga</h3><p>Corridas, carga do forno, retornos com saldo, boletim para o forneiro e resultado do laboratório.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>
       <a class="modulo" href="modelos/index.html#/mapa">${icone('cubo')}<h3>Controle de Modelos</h3><p>Almoxarifado de modelos: prateleiras, manutenção, histórico, desenho (PDF) e lista comercial.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>
-      <div class="modulo bloq">${icone('certificado')}<h3>Certificados</h3><p>Certificado de análise química, gerado a partir da corrida.</p><div class="rod"><span class="tag neutro">Próxima etapa</span></div></div>
+      <a class="modulo" href="certificados/index.html#/lista">${icone('certificado')}<h3>Certificados</h3><p>Certificado de qualidade com a análise química da corrida: busca por OP, edição na folha, impressão A4.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>
       <a class="modulo" href="https://projetos1prometals.github.io/instrucao-processo-prometals/" target="_blank" rel="noopener">${icone('prancheta')}<h3>Instrução de Processo</h3><p>Instruções por produto, com fotos, para a produção. Abre o app atual numa aba nova.</p><div class="rod"><span class="tag info">App separado</span></div></a>
     </div>`;
   const dados = { corridas: null, retornos: null, ligas: null };

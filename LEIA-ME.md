@@ -8,8 +8,8 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 |---|---|
 | **Cálculo de Liga** (corridas, retornos, ligas, sucatas e ferroligas) | Pronto (etapa 1) |
 | **Controle de Modelos** (prateleiras, manutenção, histórico, desenho em PDF, lista comercial) | Pronto |
-| Certificados | Próxima etapa |
-| Instrução de Processo | Próxima etapa |
+| **Certificados** de qualidade (busca por OP, edição na folha, análise vinda da corrida, impressão A4) | Pronto |
+| Instrução de Processo | App separado (Supabase), atalho no menu |
 
 ## Arquivos
 
@@ -22,7 +22,7 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 | `liga/` | Módulo Cálculo de Liga: tela (`index.html`, `liga.css`, `liga.js`), contas (`calculo.js`), importação da planilha (`importar.js`), dados iniciais (`dados-iniciais.js`) |
 | `modelos/` | Módulo Controle de Modelos: telas (`index.html`, `modelos.css`, `modelos.js`), regras (`regras.js`), importação da planilha Almoxarifado_Modelos (`importar.js`) |
 
-Cada módulo novo vai ganhar a sua pasta (`certificados/`, `instrucao/`).
+| `certificados/` | Módulo Certificados: folha A4 (`folha.js`), telas (`index.html`, `certificados.css`, `certificados.js`) |
 
 ## 1. Colocar no GitHub
 
@@ -96,3 +96,14 @@ O plano gratuito do Firebase (Spark) cobre a Engenharia com folga: 1 GB de dados
 - **Lista comercial**: a aba Comercial da planilha — diâmetro, variação, refinador, área, setores… com a situação no estoque atualizada sozinha.
 - **Importar a planilha**: **Ruas e importação → Escolher planilha…** → `Almoxarifado_Modelos.xlsx`. Código repetido na planilha não entra (aparece no aviso).
 - **Quem edita**: só a Engenharia (lista `EDITORES` em `comum/casca.js` e `editor()` no `firestore.rules`). Para alguém **só consultar**, crie o usuário no Firebase e coloque o e-mail na lista `leitor()` do `firestore.rules`.
+
+## Como funcionam os Certificados
+
+- **Busca**: digite a **OP** e veja em qual corrida ela está; também busca por corrida (ex.: `33-229`), material, cliente, pedido ou nº do certificado. `Enter` abre quando há um só resultado.
+- **Novo certificado**: pelo botão em **Certificados** ou, na ficha da corrida (Cálculo de Liga → Laboratório), em **Novo certificado**. Vem com corrida, material, OP da liga e a **análise do laboratório** já preenchidos. Cliente, pedido e produtos podem ser copiados de outro certificado.
+- **Edição**: clique em qualquer campo da folha e digite — **salva sozinho**. Cole uma linha de valores do Excel/espectrômetro no campo **C** para preencher a análise inteira.
+- **Conferência** (não imprime): compara a análise com a norma da liga em **Ligas e normas** e marca o que estiver fora.
+- **Análise chegou depois?** No certificado, **Trazer a análise da corrida**.
+- **Imprimir / PDF**: botão no alto ou `Ctrl+P` — folha A4, mesmo formato de antes. Na busca, marque vários e **Imprimir selecionados**.
+- **Assinatura e backup**: imagem da assinatura e cópia de segurança. Para trazer os certificados do app antigo: lá, **Backup → Exportar backup (.json)**; aqui, **Assinatura e backup → Escolher o backup**. Os que tiverem a corrida no formato `33-229` são ligados sozinhos à corrida.
+- O resultado do laboratório da corrida agora tem os **20 elementos** do certificado (P, Co, Pb, Sn, B, Mg e Fe a mais).

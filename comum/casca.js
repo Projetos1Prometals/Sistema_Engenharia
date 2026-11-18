@@ -4,7 +4,7 @@
 // =====================================================================
 import * as banco from './banco.js';
 
-export const VERSAO = '1.3.2';
+export const VERSAO = '1.4.0';
 
 // ---------- quem pode editar ----------
 // Só a Engenharia edita; os outros setores (almoxarifado, comercial…) só consultam.
@@ -12,10 +12,12 @@ export const VERSAO = '1.3.2';
 //   geral       → editor()            : Cálculo de Liga
 //   modelos     → dadosModelos()      : cadastro de modelos, posições, PDFs, ruas, importação
 //   manutencao  → manutencaoModelos() : só mandar para manutenção / registrar a volta
+//   certificados → editor()           : certificados de qualidade
 export const EDITORES = {
   geral: ['projetos1@prometals.co', 'qualidade1@prometals.co'],
   modelos: ['projetos1@prometals.co'],
   manutencao: ['projetos1@prometals.co', 'qualidade1@prometals.co'],
+  certificados: ['projetos1@prometals.co', 'qualidade1@prometals.co'],   // → editor() no firestore.rules
 };
 // No modo local todo mundo edita. Para testar como outra pessoa vê, no console do navegador:
 //   localStorage.setItem('pmt_simular', 'qualidade1@prometals.co')   (e remover depois)
@@ -84,7 +86,7 @@ const MENU = [
     { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
     { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
   ] },
-  { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', pronto: false }] },
+  { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', href: 'certificados/index.html#/lista' }] },
   // Instrução de Processo: por enquanto é o app separado (Supabase), aberto numa aba nova
   { sec: 'Processo', itens: [{ id: 'instrucao', nome: 'Instrução de Processo', ic: 'prancheta', href: 'https://projetos1prometals.github.io/instrucao-processo-prometals/', externo: true }] },
   { sec: 'Sistema', itens: [{ id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'liga/index.html#/config' }] },

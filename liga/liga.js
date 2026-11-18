@@ -7,8 +7,8 @@ import * as banco from '../comum/banco.js';
 import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo } from '../comum/casca.js';
 import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
-  codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno,
-} from './calculo.js?v=1.1.0';
+  codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,
+} from './calculo.js?v=1.4.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
 
@@ -240,7 +240,7 @@ function rascunhoDe(c) {
 function normalizar(d) {
   const mats = {};
   for (const k of Object.keys(d.materiais || {})) { const v = num(d.materiais[k]); if (v) mats[k] = v; }
-  const analise = a => { const o = {}; for (const e of ELEMENTOS) { const v = num(a && a[e]); if (v != null) o[e] = v; } return o; };
+  const analise = (a, lista = ELEMENTOS) => { const o = {}; for (const e of lista) { const v = num(a && a[e]); if (v != null) o[e] = v; } return o; };
   return {
     ...d,
     anual: num(d.anual), refratario: num(d.refratario), temperatura: num(d.temperatura),
@@ -249,7 +249,7 @@ function normalizar(d) {
       .map(r => ({ codigo: r.codigo, kg: num(r.kg) || 0, recarga: num(r.recarga) || 0 })),
     manuais: (d.manuais || []).filter(m => m.desc || num(m.kg)).map(m => ({ desc: m.desc || '', kg: num(m.kg) || 0, analise: analise(m.analise) })),
     materiais: mats,
-    real: analise(d.real),
+    real: analise(d.real, [...ELEMENTOS, ...ELEMENTOS_LAB_EXTRA]),   // resultado do laboratório: os 20 elementos do certificado
   };
 }
 
@@ -451,10 +451,24 @@ function paginaCorrida(id) {
       <div class="tab-wrap"><table class="tab tab-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
         <tr><td><b>Real (%)</b></td>${ELEMENTOS.map(e => `<td>${entNum(`data-real="${e}" id="real_${e}"`, d.real[e])}</td>`).join('')}</tr>
       </tbody></table></div>
+      <div class="tab-wrap" style="margin-top:8px"><table class="tab tab-comp" style="width:auto"><thead><tr><th><span class="mut" style="font-weight:500">Só no certificado</span></th>${ELEMENTOS_LAB_EXTRA.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
+        <tr><td><b>Real (%)</b></td>${ELEMENTOS_LAB_EXTRA.map(e => `<td>${entNum(`data-real="${e}" id="real_${e}"`, d.real[e])}</td>`).join('')}</tr>
+      </tbody></table></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button class="btn peq" id="btGerarRet">${icone('reciclar')} ${d.retornoGerado ? 'Atualizar retorno ' + esc(d.retornoGerado) : 'Gerar retorno desta corrida'}</button>
         <button class="btn peq" id="btCopiarEst" title="Preenche o real com o estimado, para depois só corrigir">Copiar estimado para o real</button>
+        ${ed.id ? `<a class="btn peq" href="${banco.raiz('certificados/index.html')}#/novo?corrida=${encodeURIComponent(ed.id)}" title="Cria o certificado de qualidade já com a análise desta corrida">${icone('certificado')} Novo certificado</a>` : ''}
+        <span id="certsDaCorrida"></span>
       </div>`;
+    if (ed.id) mostrarCertificados();
+  }
+  // Certificados já emitidos para esta corrida (lidos uma vez, só para mostrar o atalho)
+  async function mostrarCertificados() {
+    try {
+      const certs = (await banco.lerColecao('eng_certificados')).filter(c => c.corridaId === ed.id);
+      const el = C.querySelector('#certsDaCorrida');
+      if (el && certs.length) el.innerHTML = certs.map(c => `<a class="pilula lar" href="${banco.raiz('certificados/index.html')}#/c/${encodeURIComponent(c.id)}" title="${esc(c.cliente || '')}">${icone('certificado')} ${esc(c.certNo ? 'Cert. ' + String(c.certNo).split('\n')[0] : 'Certificado')}${c.cliente ? ' · ' + esc(String(c.cliente).slice(0, 25)) : ''}</a>`).join(' ');
+    } catch (e) { console.warn('certificados', e); }
   }
 
   // Partes calculadas (refeitas a cada digitação e quando o banco muda)
