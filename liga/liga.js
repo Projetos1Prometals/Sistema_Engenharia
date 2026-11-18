@@ -600,12 +600,14 @@ function paginaCorrida(id) {
 function semMeta(o) { const x = { ...o }; delete x.id; delete x._em; delete x._por; return x; }
 
 // ---------- boletim de corrida (folha impressa, com a mesma cara da folha da planilha) ----------
-// As 12 linhas de "Ligas" ficam sempre na mesma ordem da planilha, com "-" quando não usadas,
-// para o forneiro achar cada elemento sempre no mesmo lugar. À direita, a legenda dos códigos MP do NW.
+// Sequência: Retorno, Sucata, Ligas, e na frente de cada linha o código MP do NW daquele material.
+// Sucatas e ligas têm linhas fixas (sempre no mesmo lugar), com "-" quando não usadas.
+// As ligas seguem a ordem da planilha (1 a 12); o Fe Mn B/C, que na planilha ficava na área
+// da sucata por falta de espaço, vem como 13.
 const BOL_LIGAS = [
   { id: 'fesi', nome: 'Fe Si', sim: 'Si' },
   { id: 'fecr_ac', nome: 'Cr A/C', sim: 'Cr A/C' },
-  { id: 'femn_ac', nome: 'Fe Mn A/C', sim: 'Mn', extra: 'femn_bc' },
+  { id: 'femn_ac', nome: 'Fe Mn A/C', sim: 'Mn A/C' },
   { id: 'femo', nome: 'Fe Mo', sim: 'Mo' },
   { id: 'fenb', nome: 'Fe Nb', sim: 'Nb' },
   { id: 'fecr_bc', nome: 'Cr B/C', sim: 'Cr B/C' },
@@ -615,51 +617,47 @@ const BOL_LIGAS = [
   { id: 'ni', nome: 'Níquel', sim: 'Ni' },
   { id: 'feti', nome: 'Titânio', sim: 'Ti' },
   { id: 'few', nome: 'Tungstênio', sim: 'W' },
+  { id: 'femn_bc', nome: 'Fe Mn B/C', sim: 'Mn B/C' },
 ];
-const BOL_MNBC = 'femn_bc';   // Fe Mn B/C sai como "MN B/C" na área da sucata, como na planilha
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const dataBoletim = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[3]}-${MESES[+m[2] - 1]}-${m[1].slice(2)}` : ''; };
 const fmtQtd = v => (!+v ? '' : Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 }));
+// Rastreio: sempre com "FS-" na frente (vazio fica "FS-" para escrever à mão)
+const rastreioFS = fs => { const s = String(fs || '').trim(); return !s ? 'FS-' : /^FS/i.test(s) ? s : 'FS-' + s.replace(/^-+/, ''); };
 
 function htmlBoletim(n, calc, liga, est, carga) {
   const faixas = (liga && liga.faixas) || {};
   const nomeLiga = liga ? liga.nome : (n.liga || '');
   const mpDe = id => ((S.materiais.find(m => m.id === id) || {}).mp || '');
-  const vazia = () => ({ elem: '', sol: '', rec: '' });
-  const completar = (lista, minimo) => { while (lista.length < minimo) lista.push(vazia()); return lista; };
+  const completar = (lista, minimo) => { while (lista.length < minimo) lista.push({ elem: '', sol: '', rec: '' }); return lista; };
 
-  // --- Retorno <liga>: retornos (Solicitado + Recarga) e entradas manuais ---
+  // --- Retorno <liga>: retornos (Solicitado + Recarga) e entradas manuais; não têm código NW ---
   const ret = completar([
     ...n.retornos.map(r => ({ elem: esc(r.codigo), sol: fmtQtd(r.kg), rec: fmtQtd(r.recarga) })),
     ...n.manuais.map(m => ({ elem: esc(m.desc), sol: fmtQtd(m.kg), rec: '' })),
   ], 3);
 
-  // --- Sucata: as usadas, linhas em branco, e "MN B/C" sempre na última linha ---
-  const legSuc = sucatas().filter(m => m.ativo !== false || n.materiais[m.id])
-    .map(m => ({ a: esc(m.nome.replace(/^SAE\s*/i, '')), b: esc(m.mp || '') }));
-  const suc = completar(sucatas().filter(m => n.materiais[m.id]).map(m => ({ elem: esc(m.nome), sol: fmtQtd(n.materiais[m.id]), rec: '' })),
-    Math.max(4, legSuc.length - 1));
-  suc.push({ elem: 'MN B/C', sol: fmtQtd(n.materiais[BOL_MNBC]), rec: '' });
-  suc.forEach((r, i) => Object.assign(r, legSuc[i] || {}));
+  // --- Sucata: uma linha fixa para cada sucata do cadastro, com o código NW na frente ---
+  const suc = completar(sucatas().filter(m => m.ativo !== false || n.materiais[m.id]).map(m => {
+    const kg = n.materiais[m.id];
+    return { elem: kg ? esc(m.nome) : '-', sol: fmtQtd(kg), rec: '', a: esc(m.nome.replace(/^SAE\s*/i, '')), b: esc(m.mp || '') };
+  }), 3);
 
-  // --- Ligas: 12 linhas fixas na ordem da planilha (+ alguma ferroliga nova do cadastro, se usada) ---
-  const fixas = new Set([...BOL_LIGAS.map(x => x.id), BOL_MNBC]);
+  // --- Ligas: linhas fixas na ordem da planilha (+ alguma ferroliga nova do cadastro, se usada) ---
+  const fixas = new Set(BOL_LIGAS.map(x => x.id));
   const lig = BOL_LIGAS.map((x, i) => {
     const kg = n.materiais[x.id];
-    return {
-      num: i + 1, elem: kg ? x.nome : '-', sol: fmtQtd(kg), rec: '', usado: !!kg,
-      a: x.sim, b: esc(mpDe(x.id)), c: x.extra && mpDe(x.extra) ? 'MN B/C ' + esc(mpDe(x.extra)) : '',
-    };
+    return { num: i + 1, elem: kg ? x.nome : '-', sol: fmtQtd(kg), rec: '', a: x.sim, b: esc(mpDe(x.id)) };
   });
   ferroligas().filter(m => !fixas.has(m.id) && n.materiais[m.id]).forEach(m => lig.push({
-    num: lig.length + 1, elem: esc(m.nome), sol: fmtQtd(n.materiais[m.id]), rec: '', usado: true, a: esc(m.nome), b: esc(m.mp || ''),
+    num: lig.length + 1, elem: esc(m.nome), sol: fmtQtd(n.materiais[m.id]), rec: '', a: esc(m.nome), b: esc(m.mp || ''),
   }));
 
   const grupo = (rotulo, linhas) => linhas.map((r, i) => `<tr class="${i === 0 ? 'bol-ini' : ''}">
       ${i === 0 ? `<th class="bol-grupo" rowspan="${linhas.length}">${rotulo}</th>` : ''}
       ${r.num != null ? `<td class="bol-n">${r.num}</td><td>${r.elem}</td>` : `<td colspan="2" class="cen">${r.elem}</td>`}
       <td class="cen">${r.sol}</td><td class="cen">${r.rec}</td>
-      <td class="bol-leg">${r.a || ''}</td><td class="bol-leg bol-mp">${r.b || ''}</td><td class="bol-leg bol-ult">${r.c || ''}</td>
+      <td class="bol-leg">${r.a || ''}</td><td class="bol-leg bol-mp bol-ult">${r.b || ''}</td>
     </tr>`).join('');
 
   const celComp = v => `<td>${v}</td>`;
@@ -677,7 +675,7 @@ function htmlBoletim(n, calc, liga, est, carga) {
       <colgroup><col style="width:17%"><col style="width:13%"><col style="width:14%"><col style="width:17%"><col style="width:16%"><col style="width:10%"><col style="width:13%"></colgroup>
       <tr><th rowspan="2">Nº Corrida</th><th class="claro">Refratário</th><th class="claro">Anual</th><th class="claro">Ordem Produção</th>
         <td class="cen">${esc((n.ops || []).join(', '))}</td><th rowspan="2">DATA:</th><td rowspan="2" class="cen">${dataBoletim(n.data)}</td></tr>
-      <tr><td colspan="2" class="cen"><b>${esc(numeroCorrida(n))}</b></td><th class="claro">Rastreio:</th><td class="cen">${esc(n.fs || '--')}</td></tr>
+      <tr><td colspan="2" class="cen"><b>${esc(numeroCorrida(n))}</b></td><th class="claro">Rastreio:</th><td class="cen">${esc(rastreioFS(n.fs))}</td></tr>
     </table>
     <table class="bol-tab bol-dados bol-sep">
       <colgroup><col style="width:17%"><col style="width:27%"><col style="width:17%"><col style="width:16%"><col style="width:10%"><col style="width:13%"></colgroup>
@@ -687,9 +685,9 @@ function htmlBoletim(n, calc, liga, est, carga) {
 
     <div class="bol-faixa bol-sep">Carga Metálica:</div>
     <table class="bol-tab bol-carga">
-      <colgroup><col style="width:10%"><col style="width:5%"><col style="width:17%"><col style="width:14%"><col style="width:14%"><col style="width:10%"><col style="width:13%"><col style="width:17%"></colgroup>
+      <colgroup><col style="width:10%"><col style="width:5%"><col style="width:22%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:20%"></colgroup>
       <tr class="bol-cab"><th></th><th colspan="2">Elemento.</th><th class="grande">Solicitado.</th><th class="grande">Recarga</th>
-        <th class="bol-leg"></th><th class="bol-leg bol-codcab">Cód MP NW</th><th class="bol-leg bol-ult"></th></tr>
+        <th class="bol-leg"></th><th class="bol-leg bol-codcab bol-ult">Cód MP NW</th></tr>
       ${grupo('Retorno<br>' + esc(nomeLiga), ret)}
       ${grupo('Sucata', suc)}
       ${grupo('Ligas', lig)}

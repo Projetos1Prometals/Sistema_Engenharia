@@ -25,9 +25,14 @@ Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
 
 ### Boletim impresso (Ctrl+P / "Imprimir boletim")
 Imita a folha "Boletim de Corrida" da planilha, que o forneiro já conhece: uma página A4, Arial,
-fundo branco, bordas pretas finas, cabeçalhos cinza. As 12 linhas de "Ligas" ficam sempre na
-mesma ordem (`BOL_LIGAS` em `liga.js`), com "-" quando não usadas; Fe Mn B/C sai como "MN B/C" na
-área da sucata. Não mudar a ordem nem o layout sem pedido.
+fundo branco, bordas pretas finas, cabeçalhos cinza.
+- Sequência da Carga Metálica: Retorno, Sucata, Ligas; na frente de cada linha, o código MP do NW
+  daquele material (na mesma linha, não como legenda solta).
+- Sucata: uma linha fixa por sucata do cadastro. Ligas: linhas fixas na ordem da planilha
+  (`BOL_LIGAS` em `liga.js`: 1 Fe Si … 12 Tungstênio, 13 Fe Mn B/C). "-" quando não usadas.
+  O Fe Mn B/C **não** vai na área da sucata (na planilha só ficava lá por falta de espaço).
+- Rastreio = FS, sempre com o prefixo "FS-". Ordem Produção = OPs.
+- Não mudar a ordem nem o layout sem pedido.
 
 ## Testes
 Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servidor HTTP simples
