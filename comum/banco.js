@@ -261,3 +261,84 @@ export async function emLote(ops, aoProgresso) {
 export function idSeguro(texto) {
   return String(texto == null ? '' : texto).trim().replace(/[\/\\#?\[\]]+/g, '_').replace(/\s+/g, ' ').slice(0, 140) || ('x' + Date.now());
 }
+
+// ---------- arquivos (PDF dos desenhos etc.) ----------
+// Firebase: o arquivo é picado em pedaços dentro do próprio Firestore (coleção eng_arquivos),
+// porque o Storage do Firebase exige o plano pago. Cada pedaço fica bem abaixo do limite de 1 MB por documento.
+// Modo local: fica no IndexedDB do navegador.
+const COL_ARQ = 'eng_arquivos';
+const PEDACO = 700 * 1024;          // caracteres de base64 por documento
+export const ARQUIVO_MAX = 20 * 1024 * 1024;
+
+function abrirIDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('pmt_arquivos', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('arquivos');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idb(modo, fn) {
+  const db = await abrirIDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('arquivos', modo);
+    const r = fn(tx.objectStore('arquivos'));
+    tx.oncomplete = () => res(r && r.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+const paraBase64 = blob => new Promise((res, rej) => {
+  const fr = new FileReader();
+  fr.onload = () => res(String(fr.result).split(',')[1] || '');
+  fr.onerror = () => rej(fr.error);
+  fr.readAsDataURL(blob);
+});
+function deBase64(b64, tipo) {
+  const bin = atob(b64);
+  const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new Blob([u], { type: tipo || 'application/octet-stream' });
+}
+
+// Guarda o arquivo com a chave "id" (ex.: "modelo_1171"). Devolve {nome, tipo, tamanho, em}.
+export async function salvarArquivo(id, arquivo) {
+  if (arquivo.size > ARQUIVO_MAX) throw new Error(`arquivo maior que ${Math.round(ARQUIVO_MAX / 1048576)} MB`);
+  const meta = { nome: arquivo.name || 'arquivo', tipo: arquivo.type || 'application/octet-stream', tamanho: arquivo.size, em: new Date().toISOString() };
+  if (estado.modo === 'local') {
+    await idb('readwrite', s => s.put({ meta, blob: arquivo }, id));
+    return meta;
+  }
+  const b64 = await paraBase64(arquivo);
+  const partes = Math.max(1, Math.ceil(b64.length / PEDACO));
+  const antigo = await lerMetaArquivo(id);
+  const ops = [{ col: COL_ARQ, id, dados: { ...meta, partes } }];
+  for (let i = 0; i < partes; i++) ops.push({ col: COL_ARQ, id: `${id}__${i}`, dados: { dados: b64.slice(i * PEDACO, (i + 1) * PEDACO) } });
+  for (let i = partes; antigo && i < (antigo.partes || 0); i++) ops.push({ col: COL_ARQ, id: `${id}__${i}`, apagar: true });
+  // um lote por pedaço, para não passar do limite de tamanho do lote do Firestore
+  for (const op of ops) await emLote([op]);
+  return meta;
+}
+async function lerMetaArquivo(id) {
+  const { fsM, db } = estado;
+  const d = await fsM.getDoc(fsM.doc(db, COL_ARQ, id));
+  return d.exists() ? d.data() : null;
+}
+// Devolve um Blob (ou null se não existir).
+export async function lerArquivo(id) {
+  if (estado.modo === 'local') {
+    const r = await idb('readonly', s => s.get(id));
+    return r ? r.blob : null;
+  }
+  const { fsM, db } = estado;
+  const meta = await lerMetaArquivo(id);
+  if (!meta) return null;
+  const partes = await Promise.all(Array.from({ length: meta.partes || 1 }, (_, i) => fsM.getDoc(fsM.doc(db, COL_ARQ, `${id}__${i}`))));
+  return deBase64(partes.map(p => (p.exists() ? p.data().dados : '')).join(''), meta.tipo);
+}
+export async function apagarArquivo(id) {
+  if (estado.modo === 'local') { await idb('readwrite', s => s.delete(id)); return; }
+  const meta = await lerMetaArquivo(id);
+  const ops = [{ col: COL_ARQ, id, apagar: true }];
+  for (let i = 0; meta && i < (meta.partes || 0); i++) ops.push({ col: COL_ARQ, id: `${id}__${i}`, apagar: true });
+  await emLote(ops);
+}

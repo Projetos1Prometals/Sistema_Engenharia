@@ -7,7 +7,7 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 | Módulo | Situação |
 |---|---|
 | **Cálculo de Liga** (corridas, retornos, ligas, sucatas e ferroligas) | Pronto (etapa 1) |
-| Controle de Modelos | Próxima etapa |
+| **Controle de Modelos** (prateleiras, manutenção, histórico, desenho em PDF, lista comercial) | Pronto |
 | Certificados | Próxima etapa |
 | Instrução de Processo | Próxima etapa |
 
@@ -20,8 +20,9 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 | `firestore.rules` | Regras de segurança + lista de e-mails liberados (colar no Firebase) |
 | `comum/` | Partes usadas por todos os módulos: visual (`tema.css`), menu (`casca.js`), banco de dados (`banco.js`), logo |
 | `liga/` | Módulo Cálculo de Liga: tela (`index.html`, `liga.css`, `liga.js`), contas (`calculo.js`), importação da planilha (`importar.js`), dados iniciais (`dados-iniciais.js`) |
+| `modelos/` | Módulo Controle de Modelos: telas (`index.html`, `modelos.css`, `modelos.js`), regras (`regras.js`), importação da planilha Almoxarifado_Modelos (`importar.js`) |
 
-Cada módulo novo vai ganhar a sua pasta (`modelos/`, `certificados/`, `instrucao/`).
+Cada módulo novo vai ganhar a sua pasta (`certificados/`, `instrucao/`).
 
 ## 1. Colocar no GitHub
 
@@ -85,3 +86,13 @@ Dá para continuar trabalhando. O rodapé avisa, e as alterações são enviadas
 
 ## Custos
 O plano gratuito do Firebase (Spark) cobre a Engenharia com folga: 1 GB de dados, 50 mil leituras e 20 mil gravações por dia.
+
+## Como funciona o Controle de Modelos
+
+- **Prateleiras**: o mapa de cada rua, desenhado sozinho. Verde = disponível, laranja = em manutenção, azul = vaga livre. Clique numa posição para abrir o modelo ou, numa vaga livre, colocar um modelo.
+- **Modelos**: cada modelo tem um **código único** — o sistema não deixa cadastrar código repetido (nem com maiúscula/minúscula diferente). Cada posição guarda um modelo só.
+- **Manutenção**: na ficha do modelo, **Mandar para manutenção** e **Voltou da manutenção**. A data fica no histórico e a posição fica reservada enquanto ele está fora.
+- **Desenho (PDF)**: na ficha do modelo, **Enviar o PDF do desenho** (até 20 MB). Quem consulta abre ou baixa o PDF pela ficha ou pela **Lista comercial**. Os PDFs ficam no banco do Firebase (não vão para o GitHub).
+- **Lista comercial**: a aba Comercial da planilha — diâmetro, variação, refinador, área, setores… com a situação no estoque atualizada sozinha.
+- **Importar a planilha**: **Ruas e importação → Escolher planilha…** → `Almoxarifado_Modelos.xlsx`. Código repetido na planilha não entra (aparece no aviso).
+- **Quem edita**: só a Engenharia (lista `EDITORES` em `comum/casca.js` e `editor()` no `firestore.rules`). Para alguém **só consultar**, crie o usuário no Firebase e coloque o e-mail na lista `leitor()` do `firestore.rules`.

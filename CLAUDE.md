@@ -49,6 +49,18 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - As planilhas ficam em `planilhas_dados/`, que está no `.gitignore`: o repositório é público,
   **nunca** enviar planilhas para o GitHub.
 
+## Controle de Modelos (`modelos/`)
+- `regras.js` (sem tela), `modelos.js` (telas), `importar.js` (planilha Almoxarifado_Modelos), `modelos.css`.
+- Coleções: `eng_modelos` (id = código normalizado por `idModelo()`), `eng_ruas` (id = letra).
+- **Código não pode repetir** (o id sai do código; maiúsculas/espaços não contam). Na importação, o
+  repetido não entra e vai para os avisos. **Uma posição = um modelo.**
+- Situação: `manutencao` (a posição fica reservada) ou, sem isso, disponível com posição /
+  fora do estoque sem posição. Botões Manutenção / Voltou gravam no `historico` (só a data, sem destino).
+- **PDF do desenho** por código: `banco.salvarArquivo('modelo_<id>')`. No Firebase vai em pedaços na
+  coleção `eng_arquivos` (o Storage exige plano pago); no modo local, IndexedDB. Máx. 20 MB.
+- **Só a Engenharia edita**: `podeEditar()` / `EDITORES` em `comum/casca.js` + `editor()` no
+  `firestore.rules` (as duas listas têm que bater). Os outros setores entram em `leitor()` e só consultam.
+
 ## Testes
 Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servidor HTTP simples
 (ex.: `HttpListener` em PowerShell) e usa-se o Chrome headless (`--dump-dom`, `--print-to-pdf`).

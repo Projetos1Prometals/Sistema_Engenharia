@@ -2,21 +2,31 @@ rules_version = '2';
 
 // Regras do banco do Sistema Engenharia.
 // Firebase → Firestore Database → Regras → cole este texto → Publicar.
-// Para liberar uma pessoa nova: crie o usuário em Authentication e
-// acrescente o e-mail na lista abaixo.
+//
+// editor(): quem altera os dados (Engenharia). Tem que ser a mesma lista de EDITORES em comum/casca.js.
+// leitor(): quem só consulta (almoxarifado, comercial…). Para liberar alguém só para ver:
+//           crie o usuário em Authentication e acrescente o e-mail na lista de leitor().
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function liberado() {
+    function editor() {
       return request.auth != null && request.auth.token.email in [
         'projetos1@prometals.co',
         'qualidade1@prometals.co'
       ];
     }
 
+    function leitor() {
+      return editor() || (request.auth != null && request.auth.token.email in [
+        // 'almoxarifado@prometals.co',
+        // 'comercial@prometals.co'
+      ]);
+    }
+
     // Dados da Engenharia: todas as coleções que começam com "eng_"
     match /{colecao}/{doc} {
-      allow read, write: if colecao.matches('eng_.*') && liberado();
+      allow read: if colecao.matches('eng_.*') && leitor();
+      allow write: if colecao.matches('eng_.*') && editor();
     }
   }
 }

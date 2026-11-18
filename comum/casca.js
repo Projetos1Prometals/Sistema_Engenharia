@@ -4,7 +4,17 @@
 // =====================================================================
 import * as banco from './banco.js';
 
-export const VERSAO = '1.2.0';
+export const VERSAO = '1.3.0';
+
+// ---------- quem pode editar ----------
+// Só a Engenharia edita; os outros setores (almoxarifado, comercial…) só consultam.
+// Esta lista tem que ser a mesma da função editor() do firestore.rules (é ela que protege de verdade).
+export const EDITORES = ['projetos1@prometals.co', 'qualidade1@prometals.co'];
+export function podeEditar() {
+  if (banco.modo() !== 'firebase') return true;
+  const u = banco.usuario();
+  return !!u && EDITORES.includes(String(u.email || '').toLowerCase());
+}
 
 // ---------- ícones (traço simples, estilo do PCP) ----------
 const P = {
@@ -32,6 +42,10 @@ const P = {
   fechar: '<path d="M18 6L6 18M6 6l12 12"/>',
   baixar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
   subir: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
+  grade: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  documento: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/>',
+  ferramenta: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  olho: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   tubo: '<path d="M8 3h8"/><path d="M9 3v14a3 3 0 0 0 6 0V3"/><path d="M9 11h6"/>',
 };
 export function icone(nome, cls = '') {
@@ -48,7 +62,12 @@ const MENU = [
     { id: 'ligas', nome: 'Ligas e normas', ic: 'frasco', href: 'liga/index.html#/ligas' },
     { id: 'materiais', nome: 'Sucatas e ferroligas', ic: 'caixas', href: 'liga/index.html#/materiais' },
   ] },
-  { sec: 'Modelos', itens: [{ id: 'modelos', nome: 'Controle de Modelos', ic: 'cubo', pronto: false }] },
+  { sec: 'Modelos', itens: [
+    { id: 'mapa', nome: 'Prateleiras', ic: 'grade', href: 'modelos/index.html#/mapa' },
+    { id: 'modelos', nome: 'Modelos', ic: 'cubo', href: 'modelos/index.html#/lista' },
+    { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
+    { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
+  ] },
   { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', pronto: false }] },
   { sec: 'Processo', itens: [{ id: 'instrucao', nome: 'Instrução de Processo', ic: 'prancheta', pronto: false }] },
   { sec: 'Sistema', itens: [{ id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'liga/index.html#/config' }] },

@@ -62,7 +62,7 @@ async function visaoGeral() {
     <div class="kpis" id="kpis"></div>
     <div class="modulos">
       <a class="modulo" href="liga/index.html#/corridas">${icone('chama')}<h3>Cálculo de Liga</h3><p>Corridas, carga do forno, retornos com saldo, boletim para o forneiro e resultado do laboratório.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>
-      <div class="modulo bloq">${icone('cubo')}<h3>Controle de Modelos</h3><p>Almoxarifado de modelos: ruas e posições, manutenção e histórico.</p><div class="rod"><span class="tag neutro">Próxima etapa</span></div></div>
+      <a class="modulo" href="modelos/index.html#/mapa">${icone('cubo')}<h3>Controle de Modelos</h3><p>Almoxarifado de modelos: prateleiras, manutenção, histórico, desenho (PDF) e lista comercial.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>
       <div class="modulo bloq">${icone('certificado')}<h3>Certificados</h3><p>Certificado de análise química, gerado a partir da corrida.</p><div class="rod"><span class="tag neutro">Próxima etapa</span></div></div>
       <div class="modulo bloq">${icone('prancheta')}<h3>Instrução de Processo</h3><p>Instruções por produto, com fotos, para a produção.</p><div class="rod"><span class="tag neutro">Próxima etapa</span></div></div>
     </div>`;
