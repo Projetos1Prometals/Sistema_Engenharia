@@ -3,30 +3,55 @@ rules_version = '2';
 // Regras do banco do Sistema Engenharia.
 // Firebase → Firestore Database → Regras → cole este texto → Publicar.
 //
-// editor(): quem altera os dados (Engenharia). Tem que ser a mesma lista de EDITORES em comum/casca.js.
-// leitor(): quem só consulta (almoxarifado, comercial…). Para liberar alguém só para ver:
-//           crie o usuário em Authentication e acrescente o e-mail na lista de leitor().
+// As listas de e-mails têm que ser as mesmas de EDITORES em comum/casca.js.
+//   editor()            : edita o Cálculo de Liga
+//   dadosModelos()      : edita os modelos (cadastro, posições, PDFs, ruas, importação)
+//   manutencaoModelos() : só registra a ida e a volta da manutenção dos modelos
+//   leitor()            : só consulta (almoxarifado, comercial…). Para liberar alguém só para ver:
+//                         crie o usuário em Authentication e acrescente o e-mail na lista de leitor().
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function editor() {
-      return request.auth != null && request.auth.token.email in [
-        'projetos1@prometals.co',
-        'qualidade1@prometals.co'
-      ];
+    function logado(lista) {
+      return request.auth != null && request.auth.token.email in lista;
     }
-
+    function editor() {
+      return logado(['projetos1@prometals.co', 'qualidade1@prometals.co']);
+    }
+    function dadosModelos() {
+      return logado(['projetos1@prometals.co']);
+    }
+    function manutencaoModelos() {
+      return logado(['projetos1@prometals.co', 'qualidade1@prometals.co']);
+    }
     function leitor() {
-      return editor() || (request.auth != null && request.auth.token.email in [
+      return editor() || dadosModelos() || manutencaoModelos() || logado([
         // 'almoxarifado@prometals.co',
         // 'comercial@prometals.co'
       ]);
     }
 
-    // Dados da Engenharia: todas as coleções que começam com "eng_"
+    // Controle de Modelos
+    match /eng_modelos/{doc} {
+      allow read: if leitor();
+      allow write: if dadosModelos();
+      // manutenção: só pode mudar a situação e o histórico de um modelo que já existe
+      allow update: if manutencaoModelos()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['situacao', 'historico', '_em', '_por']);
+    }
+    match /eng_ruas/{doc} {
+      allow read: if leitor();
+      allow write: if dadosModelos();
+    }
+    match /eng_arquivos/{doc} {          // PDFs dos desenhos
+      allow read: if leitor();
+      allow write: if dadosModelos();
+    }
+
+    // Demais dados da Engenharia (Cálculo de Liga…): coleções que começam com "eng_"
     match /{colecao}/{doc} {
       allow read: if colecao.matches('eng_.*') && leitor();
-      allow write: if colecao.matches('eng_.*') && editor();
+      allow write: if colecao.matches('eng_.*') && !(colecao in ['eng_modelos', 'eng_ruas', 'eng_arquivos']) && editor();
     }
   }
 }

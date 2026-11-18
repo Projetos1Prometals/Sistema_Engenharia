@@ -4,16 +4,31 @@
 // =====================================================================
 import * as banco from './banco.js';
 
-export const VERSAO = '1.3.0';
+export const VERSAO = '1.3.2';
 
 // ---------- quem pode editar ----------
 // Só a Engenharia edita; os outros setores (almoxarifado, comercial…) só consultam.
-// Esta lista tem que ser a mesma da função editor() do firestore.rules (é ela que protege de verdade).
-export const EDITORES = ['projetos1@prometals.co', 'qualidade1@prometals.co'];
-export function podeEditar() {
-  if (banco.modo() !== 'firebase') return true;
-  const u = banco.usuario();
-  return !!u && EDITORES.includes(String(u.email || '').toLowerCase());
+// Estas listas têm que ser as mesmas do firestore.rules (são as regras de lá que protegem de verdade).
+//   geral       → editor()            : Cálculo de Liga
+//   modelos     → dadosModelos()      : cadastro de modelos, posições, PDFs, ruas, importação
+//   manutencao  → manutencaoModelos() : só mandar para manutenção / registrar a volta
+export const EDITORES = {
+  geral: ['projetos1@prometals.co', 'qualidade1@prometals.co'],
+  modelos: ['projetos1@prometals.co'],
+  manutencao: ['projetos1@prometals.co', 'qualidade1@prometals.co'],
+};
+// No modo local todo mundo edita. Para testar como outra pessoa vê, no console do navegador:
+//   localStorage.setItem('pmt_simular', 'qualidade1@prometals.co')   (e remover depois)
+export function podeEditar(area = 'geral') {
+  let email;
+  if (banco.modo() !== 'firebase') {
+    email = localStorage.getItem('pmt_simular');
+    if (!email) return true;
+  } else {
+    const u = banco.usuario();
+    email = u && u.email;
+  }
+  return !!email && (EDITORES[area] || []).includes(String(email).toLowerCase());
 }
 
 // ---------- ícones (traço simples, estilo do PCP) ----------
@@ -46,6 +61,7 @@ const P = {
   documento: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/>',
   ferramenta: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
   olho: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  externo: '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   tubo: '<path d="M8 3h8"/><path d="M9 3v14a3 3 0 0 0 6 0V3"/><path d="M9 11h6"/>',
 };
 export function icone(nome, cls = '') {
@@ -69,7 +85,8 @@ const MENU = [
     { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
   ] },
   { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', pronto: false }] },
-  { sec: 'Processo', itens: [{ id: 'instrucao', nome: 'Instrução de Processo', ic: 'prancheta', pronto: false }] },
+  // Instrução de Processo: por enquanto é o app separado (Supabase), aberto numa aba nova
+  { sec: 'Processo', itens: [{ id: 'instrucao', nome: 'Instrução de Processo', ic: 'prancheta', href: 'https://projetos1prometals.github.io/instrucao-processo-prometals/', externo: true }] },
   { sec: 'Sistema', itens: [{ id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'liga/index.html#/config' }] },
 ];
 
@@ -77,7 +94,9 @@ function htmlMenu(ativo) {
   return MENU.map(g => (g.sec ? `<div class="sec">${g.sec}</div>` : '') + g.itens.map(it =>
     it.pronto === false
       ? `<span class="item" title="Em migração para o sistema">${icone(it.ic)}${it.nome}${icone('cadeado', 'cad')}</span>`
-      : `<a href="${banco.raiz(it.href)}" data-menu="${it.id}" class="${it.id === ativo ? 'ativo' : ''}">${icone(it.ic)}${it.nome}</a>`
+      : it.externo
+        ? `<a href="${it.href}" target="_blank" rel="noopener" data-menu="${it.id}" title="Abre o app numa aba nova">${icone(it.ic)}${it.nome}${icone("externo", "cad")}</a>`
+        : `<a href="${banco.raiz(it.href)}" data-menu="${it.id}" class="${it.id === ativo ? "ativo" : ""}">${icone(it.ic)}${it.nome}</a>`
   ).join('')).join('');
 }
 

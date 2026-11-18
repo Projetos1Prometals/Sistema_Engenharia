@@ -14,7 +14,8 @@ import { lerAlmoxarifado } from './importar.js?v=1.3.0';
 const S = { modelos: [], ruas: [], porId: new Map(), ocup: new Map(), chegou: {} };
 const filtros = { lista: { chip: 'todos', rua: '', q: '' }, comercial: { chip: 'todos', diam: '', q: '' }, mapa: { q: '' } };
 let pagina = null;
-let ED = true;   // pode editar?
+let ED = true;   // pode editar os dados dos modelos?
+let MAN = true;  // pode registrar manutenção (ida e volta)?
 
 function recalcular() {
   S.porId = new Map(S.modelos.map(m => [m.id, m]));
@@ -22,7 +23,8 @@ function recalcular() {
 }
 
 const est = await montar({ ativo: 'mapa', trilha: ['Controle de Modelos'] });
-ED = podeEditar();
+ED = podeEditar('modelos');
+MAN = podeEditar('manutencao');
 const C = document.getElementById('conteudo');
 C.innerHTML = '<div class="vazio">Carregando dados…</div>';
 
@@ -72,7 +74,9 @@ const fmtTamanho = b => (b > 1048576 ? (b / 1048576).toLocaleString('pt-BR', { m
 const kpi = (n, rot, cls, chip) => chip
   ? `<button class="kpi ${cls}" data-chip="${chip}"><b>${n}</b><span>${rot}</span></button>`
   : `<div class="kpi ${cls}"><b>${n}</b><span>${rot}</span></div>`;
-const somenteLeitura = () => ED ? '' : `<div class="faixa">${icone('olho')} Você está só consultando. Alterações são feitas pela Engenharia.</div>`;
+const somenteLeitura = () => ED ? '' : `<div class="faixa">${icone('olho')} ${MAN
+  ? 'Você pode registrar a ida e a volta da manutenção (na ficha do modelo). Os demais dados são alterados pela Engenharia.'
+  : 'Você está só consultando. Alterações são feitas pela Engenharia.'}</div>`;
 
 // =====================================================================
 //  PRATELEIRAS (mapa)
@@ -298,7 +302,7 @@ function paginaModelo(id, params) {
     const ult = [...(atual.historico || [])].reverse().find(h => h.tipo === 'manutencao');
     box.innerHTML = `<p style="margin-top:0">${tagSit(atual)} ${st === 'manutencao' && ult ? `<span class="mut">desde ${fmtData(ult.data)}</span>` : ''}</p>
       ${st === 'manutencao' ? `<p class="mut">A posição <b>${esc(atual.posicao || '—')}</b> fica reservada até o modelo voltar.</p>` : ''}
-      ${ED ? (st === 'manutencao'
+      ${MAN ? (st === 'manutencao'
         ? `<button class="btn pri" id="btVoltou">${icone('voltar')} Voltou da manutenção</button>`
         : `<button class="btn" id="btManut">${icone('ferramenta')} Mandar para manutenção</button>`) : ''}`;
     const bm = box.querySelector('#btManut'), bv = box.querySelector('#btVoltou');

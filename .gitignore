@@ -3,3 +3,8 @@ planilhas_dados/
 *.xlsx
 *.xlsm
 *.xls
+
+# App antigo da Instrução de Processo (tem repositório git próprio): só para estudo
+INSTRUÇÃO DE PROCESSO/
+# App antigo de certificados (só para estudo)
+certificado-analise-main/

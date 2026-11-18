@@ -58,8 +58,14 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   fora do estoque sem posição. Botões Manutenção / Voltou gravam no `historico` (só a data, sem destino).
 - **PDF do desenho** por código: `banco.salvarArquivo('modelo_<id>')`. No Firebase vai em pedaços na
   coleção `eng_arquivos` (o Storage exige plano pago); no modo local, IndexedDB. Máx. 20 MB.
-- **Só a Engenharia edita**: `podeEditar()` / `EDITORES` em `comum/casca.js` + `editor()` no
-  `firestore.rules` (as duas listas têm que bater). Os outros setores entram em `leitor()` e só consultam.
+- **Quem edita** (`podeEditar(area)` / `EDITORES` em `comum/casca.js` + funções do `firestore.rules`;
+  as listas têm que bater):
+  - `modelos` / `dadosModelos()`: só **projetos1@** — cadastro, posições, PDFs, ruas, importação.
+  - `manutencao` / `manutencaoModelos()`: **projetos1@ e qualidade1@** — só ida/volta da manutenção.
+    No Firestore, a qualidade só grava se a mudança tocar apenas `situacao`, `historico`, `_em`, `_por`.
+  - `geral` / `editor()`: Cálculo de Liga (projetos1@ e qualidade1@).
+  - `leitor()`: os outros setores, só consulta.
+  - Para testar no modo local como outra pessoa: `localStorage.setItem('pmt_simular', '<email>')`.
 
 ## Testes
 Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servidor HTTP simples
