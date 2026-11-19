@@ -4,7 +4,7 @@
 // =====================================================================
 import * as banco from './banco.js';
 
-export const VERSAO = '1.4.0';
+export const VERSAO = '1.4.1';
 
 // ---------- quem pode editar ----------
 // Só a Engenharia edita; os outros setores (almoxarifado, comercial…) só consultam.
@@ -76,6 +76,7 @@ const MENU = [
   { itens: [{ id: 'inicio', nome: 'Visão geral', ic: 'casa', href: 'index.html' }] },
   { sec: 'Cálculo de Liga', itens: [
     { id: 'corridas', nome: 'Corridas', ic: 'chama', href: 'liga/index.html#/corridas' },
+    { id: 'amostras', nome: 'Amostras do dia', ic: 'tubo', href: 'liga/index.html#/amostras' },
     { id: 'retornos', nome: 'Retornos', ic: 'reciclar', href: 'liga/index.html#/retornos' },
     { id: 'ligas', nome: 'Ligas e normas', ic: 'frasco', href: 'liga/index.html#/ligas' },
     { id: 'materiais', nome: 'Sucatas e ferroligas', ic: 'caixas', href: 'liga/index.html#/materiais' },

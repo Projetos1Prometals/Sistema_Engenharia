@@ -11,6 +11,7 @@ import {
 } from './calculo.js?v=1.4.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
+import { etiquetasSaquinho, etiquetaRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta } from './amostras.js?v=1.4.1';
 
 // ---------------------------------------------------------------------
 // Estado (dados que chegam do banco)
@@ -105,6 +106,7 @@ function rotear() {
   if (h[0] === 'ligas') return paginaLigas();
   if (h[0] === 'materiais') return paginaMateriais();
   if (h[0] === 'config') return paginaConfig();
+  if (h[0] === 'amostras') return paginaAmostras();
   return paginaCorridas();
 }
 
@@ -126,6 +128,7 @@ function paginaCorridas() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Corridas</h1><p class="sub">Carga do forno, boletim para o forneiro e resultado do laboratório de cada corrida.</p></div>
+      <a class="btn" href="#/amostras" title="Etiquetas do saquinho e dos retornos e o formulário do laboratório">${icone('tubo')} Amostras do dia</a>
       <a class="btn pri" href="#/corrida/nova">${icone('mais')} Nova corrida</a>
     </div>
     <div class="kpis" id="kpis"></div>
@@ -729,6 +732,132 @@ function htmlBoletim(n, calc, liga, est, carga) {
 }
 
 // =====================================================================
+//  AMOSTRAS DO DIA — etiqueta do saquinho, etiquetas dos retornos e
+//  formulário A4 do laboratório (Priner), montados com as corridas do dia
+// =====================================================================
+const amostras = { data: null, fora: new Set(), copias: 1, retornos: true };
+function paginaAmostras() {
+  marcarMenu('amostras');
+  definirTrilha(['Cálculo de Liga', 'Amostras do dia']);
+  const f = amostras;
+  if (!f.data) f.data = hoje();
+  C.innerHTML = `
+    <div class="cab">
+      <a class="btn" href="#/corridas">${icone('voltar')}</a>
+      <div class="cresce"><h1 class="titulo">Amostras do dia</h1><p class="sub">Etiqueta do saquinho das amostras, etiqueta de cada retorno (10 × 5 cm) e o formulário do laboratório (A4), com as corridas do dia.</p></div>
+      <button class="btn" id="btDadosLab">${icone('engrenagem')} Dados do formulário</button>
+    </div>
+    <div class="cartao"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <button class="btn" id="btDiaAnt" title="Dia anterior">${icone('voltar')}</button>
+      <label class="campo" style="width:auto">Data das corridas<input class="ent" type="date" id="aData" value="${esc(f.data)}"></label>
+      <button class="btn" id="btDiaProx" title="Próximo dia" style="transform:scaleX(-1)">${icone('voltar')}</button>
+      <button class="btn" id="btHoje">Hoje</button>
+      <span class="cresce"></span>
+      <label class="campo" style="width:auto">Cópias da etiqueta do saquinho<input class="ent num" id="aCopias" inputmode="numeric" value="${f.copias}" style="width:90px"></label>
+      <label class="opcao" style="margin:0"><input type="checkbox" id="aRet" ${f.retornos ? 'checked' : ''}> Etiquetas dos retornos</label>
+      <button class="btn pri" id="btImprEtq">${icone('impressora')} Imprimir etiquetas</button>
+      <button class="btn pri" id="btImprA4">${icone('impressora')} Imprimir formulário A4</button>
+    </div></div>
+    <div class="cartao"><h2>Corridas do dia<span class="cresce"></span><span class="mut" id="aResumo" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2><div class="tab-wrap" id="aTab"></div></div>
+    <div id="aAvisos"></div>
+    <div class="cartao"><h2>Etiquetas (10 × 5 cm, tamanho real)</h2><div class="corpo"><div class="prev-etq" id="aEtq"></div></div></div>
+    <div class="cartao"><h2>Formulário do laboratório (A4)</h2><div class="corpo"><div class="prev-a4"><div class="prev-a4-in" id="aA4"></div></div></div></div>`;
+
+  const mudarDia = d => { const x = new Date(f.data + 'T12:00:00'); x.setDate(x.getDate() + d); f.data = x.toISOString().slice(0, 10); f.fora.clear(); C.querySelector('#aData').value = f.data; atualizar(); };
+  C.querySelector('#aData').onchange = e => { f.data = e.target.value || hoje(); f.fora.clear(); atualizar(); };
+  C.querySelector('#btDiaAnt').onclick = () => mudarDia(-1);
+  C.querySelector('#btDiaProx').onclick = () => mudarDia(+1);
+  C.querySelector('#btHoje').onclick = () => { f.data = hoje(); f.fora.clear(); C.querySelector('#aData').value = f.data; atualizar(); };
+  C.querySelector('#aCopias').oninput = e => { f.copias = Math.max(0, Math.min(10, Math.round(num(e.target.value) || 0))); atualizar(); };
+  C.querySelector('#aRet').onchange = e => { f.retornos = e.target.checked; atualizar(); };
+  C.querySelector('#aTab').onchange = e => { const ck = e.target.closest('[data-ck]'); if (ck) { ck.checked ? f.fora.delete(ck.dataset.ck) : f.fora.add(ck.dataset.ck); atualizar(); } };
+  C.querySelector('#btDadosLab').onclick = editarDadosLab;
+  C.querySelector('#btImprEtq').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(x.etiquetas.map(h => `<div class="pg-etq">${h}</div>`).join('')); };
+  C.querySelector('#btImprA4').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(`<div class="pg-a4">${x.form}</div>`); };
+
+  function doDia() {
+    return S.corridas.filter(c => c.data === f.data)
+      .sort((a, b) => (+a.anual || 0) - (+b.anual || 0) || (+a.refratario || 0) - (+b.refratario || 0));
+  }
+  function montar() {
+    const sel = doDia().filter(c => !f.fora.has(c.id));
+    const saq = sel.length ? etiquetasSaquinho(sel, f.data) : [];
+    const etiquetas = [];
+    for (let i = 0; i < f.copias; i++) etiquetas.push(...saq);
+    if (f.retornos) sel.forEach(c => etiquetas.push(etiquetaRetorno(c, (ligaDe(c.liga) || {}).cor)));
+    return { sel, etiquetas, form: formularioPriner(sel, f.data, cfg().priner) };
+  }
+  function atualizar() {
+    const lista = doDia();
+    const x = montar();
+    C.querySelector('#aResumo').textContent = lista.length ? `${x.sel.length} de ${lista.length} marcadas · ${x.etiquetas.length} etiqueta(s)` : '';
+    C.querySelector('#aTab').innerHTML = !lista.length ? `<div class="vazio">Nenhuma corrida em ${fmtData(f.data)}. Escolha outra data.</div>` : `
+      <table class="tab"><thead><tr><th style="width:34px"></th><th>Corrida</th><th>Liga</th><th>Cor do retorno</th><th>FS / OPs</th><th>Retorno gerado</th></tr></thead><tbody>
+      ${lista.map(c => { const l = ligaDe(c.liga); return `<tr>
+        <td><input type="checkbox" data-ck="${esc(c.id)}" ${f.fora.has(c.id) ? '' : 'checked'}></td>
+        <td class="num"><a href="#/corrida/${encodeURIComponent(c.id)}"><b>${esc(corridaEtiqueta(c))}</b></a></td>
+        <td><span class="pilula lar">${esc(c.liga || '?')}</span></td>
+        <td>${l && l.cor ? esc(l.cor) : `<span class="txt-amar">sem cor cadastrada</span>`}</td>
+        <td>${c.fs ? `<b>${esc(c.fs)}</b> ` : ''}<span class="mut">${esc((c.ops || []).join(', '))}</span></td>
+        <td class="mut">${esc(c.retornoGerado || '')}</td></tr>`; }).join('')}
+      </tbody></table>`;
+    const semCor = [...new Set(x.sel.filter(c => !(ligaDe(c.liga) || {}).cor).map(c => c.liga || '?'))];
+    C.querySelector('#aAvisos').innerHTML = f.retornos && semCor.length ? `<div class="faixa lar">Sem cor de marcação cadastrada: <b>${esc(semCor.join(', '))}</b>. A etiqueta do retorno sai com “COR:” em branco para escrever à mão. Cadastre a cor em <a href="#/ligas">Ligas e normas</a>.</div>` : '';
+    C.querySelector('#aEtq').innerHTML = x.etiquetas.length ? x.etiquetas.join('') : '<span class="mut">Nenhuma etiqueta.</span>';
+    C.querySelector('#aA4').innerHTML = x.form;
+  }
+  pagina = { nome: 'amostras', atualizar };
+  atualizar();
+}
+
+function editarDadosLab() {
+  const p = { ...PRINER_PADRAO, ...(cfg().priner || {}) };
+  const campo = (k, rot, extra = '') => `<label class="campo">${rot}${ent(`id="p_${k}" ${extra}`, p[k])}</label>`;
+  const escolha = (k, rot, ops) => `<label class="campo">${rot}<select class="ent" id="p_${k}"><option value="">(em branco — marcar à mão)</option>${ops.map(([v, t]) => `<option value="${v}" ${p[k] === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`;
+  janela({
+    titulo: 'Dados do formulário do laboratório', larga: true,
+    html: `<p class="mut" style="margin-top:0">Saem em todo formulário. Os campos “Preenchimento pelo Labteste” ficam em branco.</p>
+      <div class="linha-campos">
+        ${campo('empresa', 'Empresa')}${campo('contato', 'Contato')}${campo('telefone', 'Telefone')}${campo('vendedor', 'Vendedor')}
+      </div>
+      <div class="linha-campos" style="margin-top:10px">${campo('emailNF', 'E-mail para envio de NF')}<label class="campo" style="grid-column:span 2">E-mail para envio de relatório${ent('id="p_emailRelatorio"', p.emailRelatorio)}</label></div>
+      <div class="linha-campos" style="margin-top:10px">${campo('ensaio', 'Ensaio / análise de cada amostra')}${campo('norma', 'Norma de ensaio')}</div>
+      <div class="linha-campos" style="margin-top:10px">
+        ${escolha('destruir', 'Amostras podem ser destruídas?', [['SIM', 'SIM'], ['NAO', 'NÃO']])}
+        ${escolha('acompanhar', 'Haverá acompanhamento?', [['SIM', 'SIM'], ['NAO', 'NÃO']])}
+        ${escolha('destino', 'Após o ensaio, as amostras serão…', [['DESCARTADAS', 'DESCARTADAS'], ['RETIRADAS', 'RETIRADAS']])}
+      </div>
+      <label class="campo" style="margin-top:10px">Informações adicionais${ent('id="p_infoAdicional"', p.infoAdicional)}</label>
+      <h4 style="margin:16px 0 6px">Cabeçalho do formulário do laboratório</h4>
+      <div class="linha-campos">${campo('formCodigo', 'Código')}${campo('formRevisao', 'Revisão')}${campo('formData', 'Data da revisão')}</div>
+      <label class="campo" style="margin-top:10px">Rodapé${ent('id="p_rodape"', p.rodape)}</label>`,
+    botoes: [{ texto: 'Cancelar' }, { texto: 'Salvar', cls: 'pri', acao: el => {
+      const novo = {};
+      for (const k of Object.keys(PRINER_PADRAO)) { const i = el.querySelector('#p_' + k); if (i) novo[k] = i.value.trim(); }
+      banco.salvar(COL.config, 'liga', { ...cfg(), priner: novo });
+      aviso('Dados do formulário salvos.');
+    } }],
+  });
+}
+
+let tituloAmostras = null;
+function imprimirAmostras(html) {
+  let area = document.getElementById('areaImpressao');
+  if (!area) { area = document.createElement('div'); area.id = 'areaImpressao'; document.body.appendChild(area); }
+  area.innerHTML = html;
+  document.body.classList.add('imprimindo-amostras');
+  tituloAmostras = document.title;
+  document.title = 'Amostras ' + fmtData(amostras.data);
+  window.print();
+}
+window.addEventListener('afterprint', () => {
+  if (!document.body.classList.contains('imprimindo-amostras')) return;
+  document.body.classList.remove('imprimindo-amostras');
+  const area = document.getElementById('areaImpressao'); if (area) area.innerHTML = '';
+  if (tituloAmostras !== null) { document.title = tituloAmostras; tituloAmostras = null; }
+});
+
+// =====================================================================
 //  RETORNOS
 // =====================================================================
 function paginaRetornos() {
@@ -859,9 +988,9 @@ function paginaLigas() {
   C.querySelector('#tabela').onclick = e => { const tr = e.target.closest('tr[data-id]'); if (tr) editarLiga(S.ligas.find(l => l.id === tr.dataset.id)); };
   function atualizar() {
     C.querySelector('#tabela').innerHTML = !S.ligas.length ? '<div class="vazio">Nenhuma liga cadastrada.</div>' : `
-      <table class="tab"><thead><tr><th>Liga</th><th>Também escrita como</th><th class="dir">Temp.</th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
+      <table class="tab"><thead><tr><th>Liga</th><th>Também escrita como</th><th class="dir">Temp.</th><th>Cor do retorno</th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
       ${S.ligas.map(l => `<tr class="clic" data-id="${esc(l.id)}"><td><span class="pilula lar">${esc(l.nome)}</span></td><td class="mut">${esc((l.apelidos || []).join(', '))}</td>
-        <td class="dir num">${l.temperatura ? esc(l.temperatura) + '°' : ''}</td>
+        <td class="dir num">${l.temperatura ? esc(l.temperatura) + '°' : ''}</td><td style="white-space:nowrap">${esc(l.cor || '')}</td>
         ${ELEMENTOS.map(e => `<td class="cen num" style="white-space:nowrap">${fmtFaixa((l.faixas || {})[e])}</td>`).join('')}</tr>`).join('')}
       </tbody></table>`;
   }
@@ -879,6 +1008,7 @@ function editarLiga(l) {
         <label class="campo">Nome da liga${ent(`id="lNome" ${usada ? 'readonly title="Liga já usada em corridas"' : ''}`, l.nome)}</label>
         <label class="campo">Também escrita como (separe por vírgula)${ent('id="lApel" placeholder="ex.: A-532, A532"', (l.apelidos || []).join(', '))}</label>
         <label class="campo">Temperatura padrão (°C)${entNum('id="lTemp"', l.temperatura)}</label>
+        <label class="campo">Cor de marcação do retorno${ent('id="lCor" placeholder="ex.: AMARELO/BRANCO"', l.cor)}</label>
       </div>
       <div class="tab-wrap" style="margin-top:14px"><table class="tab tab-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
         <tr><td><b>Mín.</b></td>${ELEMENTOS.map(e => `<td>${entNum(`data-min="${e}"`, (l.faixas[e] || [])[0])}</td>`).join('')}</tr>
@@ -904,7 +1034,7 @@ function editarLiga(l) {
           faixas[e] = [mn || 0, mx];
         }
         banco.salvar(COL.ligas, id, { ...semMeta(l), nome, apelidos: el.querySelector('#lApel').value.split(',').map(s => s.trim()).filter(Boolean),
-          temperatura: num(el.querySelector('#lTemp').value), faixas, ordem: l.ordem ?? S.ligas.length });
+          temperatura: num(el.querySelector('#lTemp').value), cor: el.querySelector('#lCor').value.trim().toUpperCase(), faixas, ordem: l.ordem ?? S.ligas.length });
         aviso('Liga ' + nome + ' salva.');
       } },
     ],

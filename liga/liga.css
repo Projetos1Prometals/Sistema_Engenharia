@@ -77,3 +77,51 @@ h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)
 .bol-comp th,.bol-comp td{text-align:center;font-size:9.5pt;padding:1px 2px;height:5mm}
 .bol-comp th.bol-faixa-p{background:#fff;font-size:10pt;border-top:1.2pt solid #000}
 .bol-comp tr.azul th{background:#c5d9f1}
+
+/* ---------- amostras do dia: etiquetas 10 x 5 cm e formulário A4 do laboratório ---------- */
+.etq{width:100mm;height:50mm;box-sizing:border-box;padding:3mm 4mm;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;overflow:hidden;display:flex;flex-direction:column}
+.etq-cab,.etq-lin{display:grid;grid-template-columns:34% 38% 28%;align-items:center}
+.etq-cab span{font-size:12pt;font-weight:700}
+.etq-cab span:nth-child(2),.etq-cab span:nth-child(3),.etq-lin .etq-mat,.etq-lin .etq-data{text-align:center}
+.etq-lin{margin-top:1.2mm}
+.etq-lin b{font-size:15pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etq-lin .etq-mat{font-size:12.5pt}
+.etq-lin .etq-data{font-size:10.5pt}
+.etq-ret .etq-lin.grande b:first-child{font-size:19pt}
+.etq-peso{font-size:16pt;font-weight:700;margin-top:2.5mm}
+.etq-cor{font-size:12pt;font-weight:700;margin-top:auto;display:flex;gap:2mm;align-items:flex-end}
+.etq-branco{display:inline-block;width:45mm;border-bottom:0.3mm solid #000}
+.prev-etq{display:flex;flex-wrap:wrap;gap:12px}
+.prev-etq .etq{border:1px dashed #999;border-radius:3mm;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.prev-a4{overflow:auto;background:#7a7a7a;padding:16px;border-radius:8px}
+.prev-a4-in{width:186mm;background:#fff;padding:8mm;margin:0 auto;zoom:.8}
+
+.fpr{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff}
+.fpr table{width:100%;border-collapse:collapse;table-layout:fixed}
+.fpr th,.fpr td{border:0.6pt solid #000;padding:3px 4px;vertical-align:middle;text-align:left;word-wrap:break-word}
+.fpr th{background:#F2F2F2;font-weight:700}
+.fpr th.e{background:#F2F2F2}
+.fpr th small{display:block;font-weight:400;font-size:6.5pt}
+.fpr .c{text-align:center}
+.fpr-cab td{font-size:8.5pt}
+.fpr-cab .fpr-tit{width:62%;font-size:12pt;font-weight:700;text-align:center;padding:8px}
+.fpr-t{margin-top:6px}
+.fpr-itens th{text-align:center;font-size:7.5pt;background:#D9D9D9}
+.fpr-itens td{height:7mm}
+.fpr-sec{margin-top:10px;padding:4px;background:#D9D9D9;border:0.6pt solid #000;font-weight:700;text-align:center;font-size:9pt}
+.fpr-sec + .fpr-t{margin-top:0}
+.fpr-nota{margin:3px 0 0;font-size:7.5pt}
+.fpr-rod{margin-top:14px;padding-top:6px;border-top:0.6pt solid #000;font-size:7pt;text-align:center;color:#333}
+
+#areaImpressao{display:none}
+@page etiqueta{size:100mm 50mm;margin:0}
+@page folhaA4{size:A4 portrait;margin:10mm 12mm}
+@media print{
+  body.imprimindo-amostras > *:not(#areaImpressao){display:none!important}
+  body.imprimindo-amostras #areaImpressao{display:block}
+  body.imprimindo-amostras{background:#fff!important}
+  .pg-etq{page:etiqueta;break-after:page;width:100mm;height:50mm;overflow:hidden}
+  .pg-etq:last-child{break-after:auto}
+  .pg-a4{page:folhaA4}
+  #areaImpressao *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
