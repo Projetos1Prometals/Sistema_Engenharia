@@ -97,3 +97,26 @@ export function formularioPriner(corridas, data, p) {
     <div class="fpr-rod">${esc(p.rodape)}</div>
   </div>`;
 }
+
+// ---------- cor de marcação do retorno (tabela "CORES (RETORNO)" da fundição) ----------
+// Vale quando a liga não tem cor própria cadastrada em Ligas e normas (liga.cor tem preferência).
+// Nomes comparados sem espaço/hífen/maiúsculas, contra o nome e os apelidos da liga.
+export const CORES_RETORNO = [
+  [['SFK'], 'VERDE'],
+  [['CRK', 'DRK'], 'LARANJA'],
+  [['304', 'CF8'], 'AMARELO'],
+  [['A-532', 'FB'], 'BRANCO'],
+  [['4320'], 'AZUL'],
+  [['1045'], 'VERDE FLUORESCENTE'],
+  [['316', 'CF8M'], 'ROXO / VIOLETA'],
+  [['A-27', 'A27 Gr 65-35', 'WCB', '1030', '1035'], 'VERMELHO'],
+  // retorno de terceiro (tambor)
+  [['VC-131'], 'TAMBOR VERMELHO'],
+  [['310'], 'TAMBOR CINZA'],
+];
+const chave = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+export function corPadrao(nomes) {
+  const ks = (nomes || []).map(chave).filter(Boolean);
+  const achou = CORES_RETORNO.find(([ns]) => ns.some(n => ks.includes(chave(n))));
+  return achou ? achou[1] : '';
+}

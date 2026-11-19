@@ -37,7 +37,8 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 ### Amostras do dia (`#/amostras`, `amostras.js`)
 - Com as corridas de uma data: **etiqueta do saquinho** das amostras (10 × 5 cm; corrida, material, data;
   até 4 corridas por etiqueta), **etiqueta de cada retorno** (10 × 5 cm; corrida, material, data, "Peso:" em
-  branco, COR = `liga.cor`, cadastrada em Ligas e normas) e o **formulário A4 do laboratório Priner**
+  branco, COR = `liga.cor` cadastrada em Ligas e normas ou, sem ela, a tabela `CORES_RETORNO` de
+  `amostras.js`, copiada da folha "Cores (retorno)" da fundição; 310 e VC-131 = tambor de retorno de terceiro) e o **formulário A4 do laboratório Priner**
   (LT-FO-023; dados fixos em `config.liga.priner`, botão "Dados do formulário").
 - Imprime com páginas nomeadas (`@page etiqueta` 100×50 mm, `@page folhaA4`); etiquetas e A4 em botões
   separados (impressoras diferentes). Formato das fotos/docx que o usuário mandou — não mudar sem pedido.

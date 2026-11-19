@@ -11,7 +11,7 @@ import {
 } from './calculo.js?v=1.4.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
-import { etiquetasSaquinho, etiquetaRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta } from './amostras.js?v=1.4.1';
+import { etiquetasSaquinho, etiquetaRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.2';
 
 // ---------------------------------------------------------------------
 // Estado (dados que chegam do banco)
@@ -30,6 +30,9 @@ let editor = null;     // corrida aberta: { id, d (rascunho), sujo }
 
 const cfg = () => S.config || CONFIG_INICIAL;
 const ligaDe = nome => acharLiga(S.ligas, nome);
+// cor de marcação do retorno: a cadastrada na liga ou, sem ela, a da tabela de cores (amostras.js)
+const corPadraoLiga = l => l ? corPadrao([l.nome, ...(l.apelidos || [])]) : '';
+const corDaLiga = nome => { const l = ligaDe(nome); return (l && l.cor) || corPadraoLiga(l) || corPadrao([nome]); };
 const sucatas = () => S.materiais.filter(m => m.tipo === 'sucata');
 const ferroligas = () => S.materiais.filter(m => m.tipo !== 'sucata');
 const ordenarPor = (lista, f) => lista.sort((a, b) => (f(a) < f(b) ? -1 : f(a) > f(b) ? 1 : 0));
@@ -784,7 +787,7 @@ function paginaAmostras() {
     const saq = sel.length ? etiquetasSaquinho(sel, f.data) : [];
     const etiquetas = [];
     for (let i = 0; i < f.copias; i++) etiquetas.push(...saq);
-    if (f.retornos) sel.forEach(c => etiquetas.push(etiquetaRetorno(c, (ligaDe(c.liga) || {}).cor)));
+    if (f.retornos) sel.forEach(c => etiquetas.push(etiquetaRetorno(c, corDaLiga(c.liga))));
     return { sel, etiquetas, form: formularioPriner(sel, f.data, cfg().priner) };
   }
   function atualizar() {
@@ -797,11 +800,11 @@ function paginaAmostras() {
         <td><input type="checkbox" data-ck="${esc(c.id)}" ${f.fora.has(c.id) ? '' : 'checked'}></td>
         <td class="num"><a href="#/corrida/${encodeURIComponent(c.id)}"><b>${esc(corridaEtiqueta(c))}</b></a></td>
         <td><span class="pilula lar">${esc(c.liga || '?')}</span></td>
-        <td>${l && l.cor ? esc(l.cor) : `<span class="txt-amar">sem cor cadastrada</span>`}</td>
+        <td>${corDaLiga(c.liga) ? esc(corDaLiga(c.liga)) + (l && l.cor ? "" : ` <span class="mut">(tabela)</span>`) : `<span class="txt-amar">sem cor</span>`}</td>
         <td>${c.fs ? `<b>${esc(c.fs)}</b> ` : ''}<span class="mut">${esc((c.ops || []).join(', '))}</span></td>
         <td class="mut">${esc(c.retornoGerado || '')}</td></tr>`; }).join('')}
       </tbody></table>`;
-    const semCor = [...new Set(x.sel.filter(c => !(ligaDe(c.liga) || {}).cor).map(c => c.liga || '?'))];
+    const semCor = [...new Set(x.sel.filter(c => !corDaLiga(c.liga)).map(c => c.liga || '?'))];
     C.querySelector('#aAvisos').innerHTML = f.retornos && semCor.length ? `<div class="faixa lar">Sem cor de marcação cadastrada: <b>${esc(semCor.join(', '))}</b>. A etiqueta do retorno sai com “COR:” em branco para escrever à mão. Cadastre a cor em <a href="#/ligas">Ligas e normas</a>.</div>` : '';
     C.querySelector('#aEtq').innerHTML = x.etiquetas.length ? x.etiquetas.join('') : '<span class="mut">Nenhuma etiqueta.</span>';
     C.querySelector('#aA4').innerHTML = x.form;
@@ -990,7 +993,7 @@ function paginaLigas() {
     C.querySelector('#tabela').innerHTML = !S.ligas.length ? '<div class="vazio">Nenhuma liga cadastrada.</div>' : `
       <table class="tab"><thead><tr><th>Liga</th><th>Também escrita como</th><th class="dir">Temp.</th><th>Cor do retorno</th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
       ${S.ligas.map(l => `<tr class="clic" data-id="${esc(l.id)}"><td><span class="pilula lar">${esc(l.nome)}</span></td><td class="mut">${esc((l.apelidos || []).join(', '))}</td>
-        <td class="dir num">${l.temperatura ? esc(l.temperatura) + '°' : ''}</td><td style="white-space:nowrap">${esc(l.cor || '')}</td>
+        <td class="dir num">${l.temperatura ? esc(l.temperatura) + '°' : ''}</td><td style="white-space:nowrap">${l.cor ? esc(l.cor) : corPadraoLiga(l) ? `<span class="mut">${esc(corPadraoLiga(l))} (tabela)</span>` : ''}</td>
         ${ELEMENTOS.map(e => `<td class="cen num" style="white-space:nowrap">${fmtFaixa((l.faixas || {})[e])}</td>`).join('')}</tr>`).join('')}
       </tbody></table>`;
   }
@@ -1008,7 +1011,7 @@ function editarLiga(l) {
         <label class="campo">Nome da liga${ent(`id="lNome" ${usada ? 'readonly title="Liga já usada em corridas"' : ''}`, l.nome)}</label>
         <label class="campo">Também escrita como (separe por vírgula)${ent('id="lApel" placeholder="ex.: A-532, A532"', (l.apelidos || []).join(', '))}</label>
         <label class="campo">Temperatura padrão (°C)${entNum('id="lTemp"', l.temperatura)}</label>
-        <label class="campo">Cor de marcação do retorno${ent('id="lCor" placeholder="ex.: AMARELO/BRANCO"', l.cor)}</label>
+        <label class="campo">Cor de marcação do retorno${ent(`id="lCor" placeholder="${esc(corPadraoLiga(l) ? corPadraoLiga(l) + " (tabela)" : "ex.: AMARELO")}"`, l.cor)}</label>
       </div>
       <div class="tab-wrap" style="margin-top:14px"><table class="tab tab-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
         <tr><td><b>Mín.</b></td>${ELEMENTOS.map(e => `<td>${entNum(`data-min="${e}"`, (l.faixas[e] || [])[0])}</td>`).join('')}</tr>
