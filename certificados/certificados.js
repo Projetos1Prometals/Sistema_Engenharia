@@ -11,7 +11,8 @@ import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, 
 import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.4.0';
 import {
   QALL, FIXED, DEF, clone, hojeBR, dateKey, abaFrom, setPath, fmtNum, parseNum, upgradeCert, setQuimica, SEC_AFTER_Q, shiftNum, certHTML,
-} from './folha.js?v=1.4.0';
+  unidadesProdutos, produtosParte, rotuloPagina, certContinuacao,
+} from './folha.js?v=1.4.3';
 
 const COL = { certs: 'eng_certificados' };
 const CFG_ID = 'certificado';                       // eng_config/certificado → { assinatura }
@@ -323,13 +324,20 @@ function paginaEditor(id, focar) {
       <button class="btn pri" id="btImpr">${icone('impressora')} Imprimir / PDF</button>
     </div>
     <div class="editor-cert">
-      <div class="papel-wrap"><div class="papel ${ED ? 'editing' : ''}" id="papel"></div></div>
+      <div class="papel-wrap"><div id="avisoFolhas"></div><div class="papel ${ED ? 'editing' : ''}" id="papel"></div></div>
       <aside class="lado" id="lado"></aside>
     </div>`;
   const papel = C.querySelector('#papel'), lado = C.querySelector('#lado');
 
   const mexeu = () => { agendarSalvar(cur); };
-  function pintarPapel(focoPath) { papel.innerHTML = certHTML(cur, ED, { assinatura: assinatura(), logo: LOGO }); marcarConferencia(); if (focoPath) focarCampo(focoPath); }
+  function pintarPapel(focoPath) { papel.innerHTML = certHTML(cur, ED, { assinatura: assinatura(), logo: LOGO }); marcarConferencia(); avisarFolhas(); if (focoPath) focarCampo(focoPath); }
+  // muitos itens: avisa que a impressão sai em mais de uma folha
+  function avisarFolhas() {
+    const t = papel.querySelector(".cert"), el = C.querySelector("#avisoFolhas");
+    if (!t || !el) return;
+    const mais = t.getBoundingClientRect().height * ESCALA_MIN > ALTURA_UTIL_PX;
+    el.innerHTML = mais ? `<div class="faixa lar" style="margin-bottom:10px">Muitos itens: na impressão, os produtos que não couberem na folha 1 continuam na <b>folha 2</b> (com cabeçalho, assinatura e rodapé). A página sai como “1 de 2”, “2 de 2”.</div>` : "";
+  }
   function focarCampo(path) { const el = papel.querySelector(`[data-f="${CSS.escape(path)}"]`); if (el) { el.focus(); fimDoTexto(el); } }
   function fimDoTexto(el) { const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
   const lerTexto = el => { const t = el.innerText.replace(/ /g, ' ').replace(/\r/g, '').replace(/\n+$/, ''); return t.trim() === '' ? '' : t; };
@@ -367,7 +375,7 @@ function paginaEditor(id, focar) {
       </div></div>
       ${ED ? `<div class="cartao"><h2>Opções</h2><div class="corpo">
         <label class="opcao"><input type="checkbox" id="chkQuim" ${cur.mostrarQuimica !== false ? 'checked' : ''}> Incluir análise química</label>
-        <label class="opcao"><input type="checkbox" id="chkSig" ${cur.mostrarAssinatura !== false ? 'checked' : ''}> Mostrar assinatura${assinatura() ? '' : ' <span class="mut">(nenhuma cadastrada)</span>'}</label>
+        <label class="opcao"><input type="checkbox" id="chkSig" ${cur.mostrarAssinatura !== false ? 'checked' : ''}> Mostrar assinatura</label>${assinatura() ? '' : '<div class="faixa lar" style="margin:4px 0 10px;font-size:12.5px">Nenhuma assinatura cadastrada: o certificado sai sem a imagem. Cadastre em <a href="#/config">Assinatura e backup</a>.</div>'}
         <button class="btn peq" id="btHoje">Data de emissão = hoje</button>
       </div></div>
       <div class="cartao"><h2>Uso interno <span class="pilula">não imprime</span></h2><div class="corpo">
@@ -556,12 +564,49 @@ function paginaEditor(id, focar) {
 //  IMPRESSÃO (A4, mesmo formato da planilha)
 // =====================================================================
 const ALTURA_UTIL_MM = 296 - 2 * 19.05, PX_MM = 96 / 25.4;
+const ESCALA_MAX = 0.94, ESCALA_MIN = 0.9;            // abaixo disso, em vez de diminuir a letra, passa para outra folha
+const ALTURA_UTIL_PX = ALTURA_UTIL_MM * PX_MM - 4;
+// Divide o certificado em folhas: a 1ª é a folha completa; os itens que não cabem vão para as seguintes.
+function folhasDoCert(r, medir) {
+  const op = { assinatura: assinatura(), logo: LOGO };
+  const cabe = html => medir(html) * ESCALA_MIN <= ALTURA_UTIL_PX;
+  const inteiro = certHTML({ ...r, pagina: rotuloPagina(r, 1, 1) }, false, op);
+  const u = unidadesProdutos(r.produtos);
+  if (u.length <= 1 || cabe(inteiro)) return [inteiro];
+  const P = r.produtos;
+  // folha 1: o máximo de itens que cabe
+  let k = u.length - 1;
+  while (k > 0 && !cabe(certHTML({ ...r, produtos: produtosParte(P, u, 0, k, true) }, false, op))) k--;
+  if (k > 0 && u[k - 1].j === -1) k--;                // não deixar título de produto sozinho no pé da folha
+  const cortes = [[0, k]];
+  // folhas seguintes
+  for (let a = k; a < u.length;) {
+    let b = u.length;
+    while (b > a + 1 && !cabe(certContinuacao({ ...r, produtos: produtosParte(P, u, a, b, b < u.length) }, op))) b--;
+    if (b < u.length && b > a + 1 && u[b - 1].j === -1) b--;
+    cortes.push([a, b]); a = b;
+  }
+  const n = cortes.length;
+  return cortes.map(([a, b], i) => {
+    const prods = produtosParte(P, u, a, b, i < n - 1);
+    return i === 0 ? certHTML({ ...r, produtos: prods, pagina: rotuloPagina(r, 1, n) }, false, op)
+      : certContinuacao({ ...r, produtos: prods }, { ...op, pagina: rotuloPagina(r, i + 1, n) });
+  });
+}
+function medidor(area) {
+  const tmp = document.createElement('div'); tmp.className = 'pagina-cert'; area.appendChild(tmp);
+  return { medir: html => { tmp.innerHTML = html; return tmp.firstElementChild.getBoundingClientRect().height; }, fim: () => tmp.remove() };
+}
 let tituloAntes = null;
 function prepararImpressao(lista) {
   let area = document.getElementById('areaImpressao');
   if (!area) { area = document.createElement('div'); area.id = 'areaImpressao'; document.body.appendChild(area); }
-  area.innerHTML = lista.map(r => `<div class="pagina-cert">${certHTML(r, false, { assinatura: assinatura(), logo: LOGO })}</div>`).join('');
-  area.querySelectorAll('.cert').forEach(t => { const h = t.getBoundingClientRect().height; t.style.zoom = Math.min(0.94, (ALTURA_UTIL_MM * PX_MM - 4) / h).toFixed(4); });
+  area.innerHTML = '';
+  const m = medidor(area);
+  const folhas = lista.flatMap(r => folhasDoCert(r, m.medir));
+  m.fim();
+  area.innerHTML = folhas.map(h => `<div class="pagina-cert">${h}</div>`).join('');
+  area.querySelectorAll('.cert').forEach(t => { const h = t.getBoundingClientRect().height; t.style.zoom = Math.min(ESCALA_MAX, ALTURA_UTIL_PX / h).toFixed(4); });
   document.body.classList.add('imprimindo-cert');
   tituloAntes = document.title;
   document.title = lista.length === 1 ? `Certificado ${lista[0].aba || ''}`.trim() : `Certificados (${lista.length})`;

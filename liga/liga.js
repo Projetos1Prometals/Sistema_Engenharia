@@ -11,7 +11,7 @@ import {
 } from './calculo.js?v=1.4.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
-import { etiquetasSaquinho, etiquetaRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.2';
+import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.4';
 
 // ---------------------------------------------------------------------
 // Estado (dados que chegam do banco)
@@ -556,6 +556,7 @@ function paginaCorrida(id) {
       dados.estimadoPlanilha = orig.estimadoPlanilha || {}; dados.anualInferido = orig.anualInferido; dados.ligaPlanilha = orig.ligaPlanilha; dados.opsTexto = orig.opsTexto;
       if (orig.controle) dados.controle = orig.controle;   // o que veio da planilha Controle de Corrida
     }
+    if (!ed.importada) { dados.retornoGerado = d.retornoGerado = retornoAutomatico(n, liga, novoId, ed.retornoOpc); ed.retornoOpc = null; }
     banco.salvar(COL.corridas, novoId, dados).catch(e => aviso('Erro ao salvar: ' + e.message, 'erro'));
     // Atualiza os contadores se esta é a corrida mais recente
     const ct = cfg().contadores || {};
@@ -573,6 +574,8 @@ function paginaCorrida(id) {
   async function excluirCorrida() {
     if (!confirm(`Excluir a corrida ${numeroCorrida(orig)}? Os retornos que ela usava voltam para o saldo.`)) return;
     await banco.apagar(COL.corridas, orig.id);
+    const codRg = d.retornoGerado || orig.retornoGerado, rg = codRg && S.retPorCod.get(codRg);
+    if (rg && retornoDescartavel(rg, orig.id)) banco.apagar(COL.retornos, banco.idSeguro(rg.codigo));
     editor = null;
     aviso('Corrida excluída.');
     location.hash = '#/corridas';
@@ -581,7 +584,6 @@ function paginaCorrida(id) {
   function gerarRetorno() {
     if (!ed.id) return aviso('Salve a corrida antes de gerar o retorno.', 'erro');
     const n = normalizar(d);
-    if (!temAnalise(n.real)) return aviso('Preencha o resultado real do laboratório primeiro.', 'erro');
     const liga = ligaDe(n.liga);
     const codigoPadrao = d.retornoGerado || codigoRetornoDaCorrida(n, liga ? liga.nome : n.liga);
     const existente = S.retPorCod.get(codigoPadrao);
@@ -596,15 +598,12 @@ function paginaCorrida(id) {
         texto: existente ? 'Atualizar retorno' : 'Gerar retorno', cls: 'pri', acao: el => {
           const codigo = el.querySelector('#gCod').value.trim();
           if (!codigo) { aviso('Informe o código.', 'erro'); return false; }
-          const atual = S.retPorCod.get(codigo) || {};
-          const kg = num(el.querySelector('#gKg').value);
-          banco.salvar(COL.retornos, banco.idSeguro(codigo), {
-            ...semMeta(atual), codigo, liga: liga ? liga.nome : n.liga,
-            analise: n.real, relatorio: (n.lab && n.lab.relatorio) || atual.relatorio || '',
-            kgVerificado: kg != null ? kg : (atual.kgVerificado || 0), baixaPlanilha: atual.baixaPlanilha || 0,
-            origem: atual.origem || 'sistema', corridaId: ed.id, corridaRef: { refratario: n.refratario, anual: n.anual },
-          });
+          const outro = S.retPorCod.get(codigo);
+          if (outro && outro.corridaId && outro.corridaId !== ed.id) { aviso(`O retorno ${codigo} já é de outra corrida.`, 'erro'); return false; }
+          const anterior = d.retornoGerado && d.retornoGerado !== codigo ? S.retPorCod.get(d.retornoGerado) : null;
+          if (anterior && retornoDescartavel(anterior, ed.id)) banco.apagar(COL.retornos, banco.idSeguro(anterior.codigo));
           d.retornoGerado = codigo;
+          ed.retornoOpc = { kg: num(el.querySelector('#gKg').value), manterCodigo: true };
           salvarCorrida();
           montarLab();
           aviso('Retorno ' + codigo + (existente ? ' atualizado.' : ' criado.'));
@@ -738,7 +737,41 @@ function htmlBoletim(n, calc, liga, est, carga) {
 //  AMOSTRAS DO DIA — etiqueta do saquinho, etiquetas dos retornos e
 //  formulário A4 do laboratório (Priner), montados com as corridas do dia
 // =====================================================================
-const amostras = { data: null, fora: new Set(), copias: 1, retornos: true };
+// =====================================================================
+//  RETORNO AUTOMÁTICO: toda corrida do sistema gera o seu retorno ("ref-anual-LIGA")
+//  ao ser salva. Peso (kg verificado) fica 0 até pesar; a análise vem do laboratório.
+// =====================================================================
+const retornoUsado = (codigo, menosCorrida) => S.corridas.some(c => c.id !== menosCorrida && (c.retornos || []).some(r => r.codigo === codigo));
+// pode apagar/renomear: criado sozinho, ainda sem peso e sem uso em corrida
+const retornoDescartavel = (r, corridaId) => r && r.auto && !(+r.kgVerificado) && !(+r.baixaPlanilha) && !retornoUsado(r.codigo, corridaId);
+function retornoAutomatico(n, liga, corridaId, opc) {
+  opc = opc || {};
+  const nomeLiga = liga ? liga.nome : n.liga;
+  const padrao = codigoRetornoDaCorrida(n, nomeLiga);
+  let codigo = n.retornoGerado || padrao;
+  // liga ou número mudou depois de gerar: troca o código, se o retorno ainda não foi pesado nem usado
+  if (codigo !== padrao && !opc.manterCodigo) {
+    const velho = S.retPorCod.get(codigo);
+    if (!velho || retornoDescartavel(velho, corridaId)) {
+      if (velho) banco.apagar(COL.retornos, banco.idSeguro(codigo));
+      codigo = padrao;
+    }
+  }
+  const atual = S.retPorCod.get(codigo) || null;
+  if (atual && atual.corridaId && atual.corridaId !== corridaId && !n.retornoGerado) return '';   // código já é de outra corrida
+  const a = atual || {};
+  banco.salvar(COL.retornos, banco.idSeguro(codigo), {
+    ...semMeta(a), codigo, liga: nomeLiga,
+    analise: temAnalise(n.real) ? n.real : (a.analise || {}),
+    relatorio: (n.lab && n.lab.relatorio) || a.relatorio || '',
+    kgVerificado: opc.kg != null ? opc.kg : (+a.kgVerificado || 0), baixaPlanilha: +a.baixaPlanilha || 0,
+    origem: a.origem || 'sistema', auto: atual ? !!a.auto : !opc.manterCodigo,
+    corridaId, corridaRef: { refratario: n.refratario, anual: n.anual },
+  }).catch(e => aviso('Erro ao gravar o retorno: ' + e.message, 'erro'));
+  return codigo;
+}
+
+const amostras = { data: null, fora: new Set(), copias: 1 };
 function paginaAmostras() {
   marcarMenu('amostras');
   definirTrilha(['Cálculo de Liga', 'Amostras do dia']);
@@ -747,7 +780,7 @@ function paginaAmostras() {
   C.innerHTML = `
     <div class="cab">
       <a class="btn" href="#/corridas">${icone('voltar')}</a>
-      <div class="cresce"><h1 class="titulo">Amostras do dia</h1><p class="sub">Etiqueta do saquinho das amostras, etiqueta de cada retorno (10 × 5 cm) e o formulário do laboratório (A4), com as corridas do dia.</p></div>
+      <div class="cresce"><h1 class="titulo">Amostras do dia</h1><p class="sub">Etiqueta do saquinho das amostras (10 × 5 cm), etiqueta de cada retorno (meia folha A4, duas por folha) e o formulário do laboratório (A4), com as corridas do dia.</p></div>
       <button class="btn" id="btDadosLab">${icone('engrenagem')} Dados do formulário</button>
     </div>
     <div class="cartao"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -757,13 +790,14 @@ function paginaAmostras() {
       <button class="btn" id="btHoje">Hoje</button>
       <span class="cresce"></span>
       <label class="campo" style="width:auto">Cópias da etiqueta do saquinho<input class="ent num" id="aCopias" inputmode="numeric" value="${f.copias}" style="width:90px"></label>
-      <label class="opcao" style="margin:0"><input type="checkbox" id="aRet" ${f.retornos ? 'checked' : ''}> Etiquetas dos retornos</label>
-      <button class="btn pri" id="btImprEtq">${icone('impressora')} Imprimir etiquetas</button>
+      <button class="btn pri" id="btImprEtq">${icone('impressora')} Imprimir etiquetas do saquinho</button>
+      <button class="btn pri" id="btImprRet">${icone('impressora')} Imprimir retornos (A4)</button>
       <button class="btn pri" id="btImprA4">${icone('impressora')} Imprimir formulário A4</button>
     </div></div>
     <div class="cartao"><h2>Corridas do dia<span class="cresce"></span><span class="mut" id="aResumo" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2><div class="tab-wrap" id="aTab"></div></div>
     <div id="aAvisos"></div>
-    <div class="cartao"><h2>Etiquetas (10 × 5 cm, tamanho real)</h2><div class="corpo"><div class="prev-etq" id="aEtq"></div></div></div>
+    <div class="cartao"><h2>Etiquetas do saquinho (10 × 5 cm, tamanho real)</h2><div class="corpo"><div class="prev-etq" id="aEtq"></div></div></div>
+    <div class="cartao"><h2>Etiquetas dos retornos (meia folha A4, duas por folha)</h2><div class="corpo"><div class="prev-ret" id="aRetPrev"></div></div></div>
     <div class="cartao"><h2>Formulário do laboratório (A4)</h2><div class="corpo"><div class="prev-a4"><div class="prev-a4-in" id="aA4"></div></div></div></div>`;
 
   const mudarDia = d => { const x = new Date(f.data + 'T12:00:00'); x.setDate(x.getDate() + d); f.data = x.toISOString().slice(0, 10); f.fora.clear(); C.querySelector('#aData').value = f.data; atualizar(); };
@@ -772,10 +806,10 @@ function paginaAmostras() {
   C.querySelector('#btDiaProx').onclick = () => mudarDia(+1);
   C.querySelector('#btHoje').onclick = () => { f.data = hoje(); f.fora.clear(); C.querySelector('#aData').value = f.data; atualizar(); };
   C.querySelector('#aCopias').oninput = e => { f.copias = Math.max(0, Math.min(10, Math.round(num(e.target.value) || 0))); atualizar(); };
-  C.querySelector('#aRet').onchange = e => { f.retornos = e.target.checked; atualizar(); };
   C.querySelector('#aTab').onchange = e => { const ck = e.target.closest('[data-ck]'); if (ck) { ck.checked ? f.fora.delete(ck.dataset.ck) : f.fora.add(ck.dataset.ck); atualizar(); } };
   C.querySelector('#btDadosLab').onclick = editarDadosLab;
-  C.querySelector('#btImprEtq').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(x.etiquetas.map(h => `<div class="pg-etq">${h}</div>`).join('')); };
+  C.querySelector('#btImprEtq').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); if (!x.etiquetas.length) return aviso('Cópias da etiqueta do saquinho = 0.', 'erro'); imprimirAmostras(x.etiquetas.map(h => `<div class="pg-etq">${h}</div>`).join('')); };
+  C.querySelector('#btImprRet').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(x.retornos.join('')); };
   C.querySelector('#btImprA4').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(`<div class="pg-a4">${x.form}</div>`); };
 
   function doDia() {
@@ -787,13 +821,13 @@ function paginaAmostras() {
     const saq = sel.length ? etiquetasSaquinho(sel, f.data) : [];
     const etiquetas = [];
     for (let i = 0; i < f.copias; i++) etiquetas.push(...saq);
-    if (f.retornos) sel.forEach(c => etiquetas.push(etiquetaRetorno(c, corDaLiga(c.liga))));
-    return { sel, etiquetas, form: formularioPriner(sel, f.data, cfg().priner) };
+    const retornos = folhasRetorno(sel.map(c => etiquetaRetorno(c, corDaLiga(c.liga))));
+    return { sel, etiquetas, retornos, form: formularioPriner(sel, f.data, cfg().priner) };
   }
   function atualizar() {
     const lista = doDia();
     const x = montar();
-    C.querySelector('#aResumo').textContent = lista.length ? `${x.sel.length} de ${lista.length} marcadas · ${x.etiquetas.length} etiqueta(s)` : '';
+    C.querySelector('#aResumo').textContent = lista.length ? `${x.sel.length} de ${lista.length} marcadas · ${x.etiquetas.length} etiqueta(s) do saquinho · ${x.retornos.length} folha(s) A4 de retorno` : '';
     C.querySelector('#aTab').innerHTML = !lista.length ? `<div class="vazio">Nenhuma corrida em ${fmtData(f.data)}. Escolha outra data.</div>` : `
       <table class="tab"><thead><tr><th style="width:34px"></th><th>Corrida</th><th>Liga</th><th>Cor do retorno</th><th>FS / OPs</th><th>Retorno gerado</th></tr></thead><tbody>
       ${lista.map(c => { const l = ligaDe(c.liga); return `<tr>
@@ -805,8 +839,9 @@ function paginaAmostras() {
         <td class="mut">${esc(c.retornoGerado || '')}</td></tr>`; }).join('')}
       </tbody></table>`;
     const semCor = [...new Set(x.sel.filter(c => !corDaLiga(c.liga)).map(c => c.liga || '?'))];
-    C.querySelector('#aAvisos').innerHTML = f.retornos && semCor.length ? `<div class="faixa lar">Sem cor de marcação cadastrada: <b>${esc(semCor.join(', '))}</b>. A etiqueta do retorno sai com “COR:” em branco para escrever à mão. Cadastre a cor em <a href="#/ligas">Ligas e normas</a>.</div>` : '';
+    C.querySelector('#aAvisos').innerHTML = semCor.length ? `<div class="faixa lar">Sem cor de marcação cadastrada: <b>${esc(semCor.join(', '))}</b>. A etiqueta do retorno sai com “COR:” em branco para escrever à mão. Cadastre a cor em <a href="#/ligas">Ligas e normas</a>.</div>` : '';
     C.querySelector('#aEtq').innerHTML = x.etiquetas.length ? x.etiquetas.join('') : '<span class="mut">Nenhuma etiqueta.</span>';
+    C.querySelector('#aRetPrev').innerHTML = x.retornos.length ? x.retornos.join('') : '<span class="mut" style="color:#fff">Nenhuma corrida marcada.</span>';
     C.querySelector('#aA4').innerHTML = x.form;
   }
   pagina = { nome: 'amostras', atualizar };

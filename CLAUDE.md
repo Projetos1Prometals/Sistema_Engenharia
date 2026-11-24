@@ -23,6 +23,13 @@ Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
   apagar o Solicitado volta ao automático). Aviso em vermelho se Solicitado + Recarga passar do disponível.
 - Ex.: retorno com 370 kg, recarga 80 → Solicitado 290; a carga soma 290; o saldo final é 0.
 
+### Retorno automático (`retornoAutomatico()` em `liga.js`)
+- Toda corrida **do sistema** (não as importadas) gera/atualiza o seu retorno ao ser salva: código
+  `ref-anual-LIGA`, `kgVerificado` 0 até pesar (tela Retornos, filtro "Sem peso"), análise = resultado real
+  do laboratório, `auto: true`, `corridaId`. O código fica em `corrida.retornoGerado`.
+- Se a liga/número mudar, ou a corrida for excluída, o retorno automático é renomeado/apagado **só** se ainda
+  não tiver peso, baixa nem uso em outra corrida. O botão "Atualizar retorno" da ficha serve para peso e código à mão.
+
 ### Boletim impresso (Ctrl+P / "Imprimir boletim")
 Imita a folha "Boletim de Corrida" da planilha, que o forneiro já conhece: uma página A4, Arial,
 fundo branco, bordas pretas finas, cabeçalhos cinza.
@@ -36,12 +43,12 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 
 ### Amostras do dia (`#/amostras`, `amostras.js`)
 - Com as corridas de uma data: **etiqueta do saquinho** das amostras (10 × 5 cm; corrida, material, data;
-  até 4 corridas por etiqueta), **etiqueta de cada retorno** (10 × 5 cm; corrida, material, data, "Peso:" em
+  até 4 corridas por etiqueta), **etiqueta de cada retorno** (meia folha A4, duas por folha, linha tracejada para cortar; corrida, material, data, "Peso:" em
   branco, COR = `liga.cor` cadastrada em Ligas e normas ou, sem ela, a tabela `CORES_RETORNO` de
   `amostras.js`, copiada da folha "Cores (retorno)" da fundição; 310 e VC-131 = tambor de retorno de terceiro) e o **formulário A4 do laboratório Priner**
   (LT-FO-023; dados fixos em `config.liga.priner`, botão "Dados do formulário").
-- Imprime com páginas nomeadas (`@page etiqueta` 100×50 mm, `@page folhaA4`); etiquetas e A4 em botões
-  separados (impressoras diferentes). Formato das fotos/docx que o usuário mandou — não mudar sem pedido.
+- Imprime com páginas nomeadas (`@page etiqueta` 100×50 mm, `@page folhaA4`, `@page folhaRetorno` = A4 sem margem);
+  saquinho, retornos e formulário em botões separados (impressoras diferentes). Formato das fotos/docx que o usuário mandou — não mudar sem pedido.
 
 ### Importação das planilhas (Configurações) — `importar.js`
 - **Calculo de Ligas (.xlsm)** → `lerPlanilha`: ligas, retornos (Dados Retorno), corridas da aba
@@ -80,6 +87,10 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - `folha.js` (a folha A4 — layout copiado do app antigo / planilha, 12 colunas; não mudar sem pedido),
   `certificados.js` (telas), `certificados.css`.
 - Coleção `eng_certificados` (id do app antigo mantido na importação); assinatura em `eng_config/certificado`.
+- **Mais de uma folha** (`folhasDoCert()` em `certificados.js`, `certContinuacao()` em `folha.js`): se não couber
+  numa A4 com escala ≥ 0,9, a folha 1 sai completa com os itens que cabem + "Continua na folha seguinte" e o resto
+  vai para folhas de continuação (cabeçalho, identificação, itens, assinatura, rodapé). "Página" vira "1 de N"
+  quando o campo está no formato "N de N". A assinatura é a imagem de `eng_config/certificado` e sai em todas as folhas.
 - Editado direto na folha (contenteditable) e **salva sozinho** ~0,7 s depois de parar de digitar.
 - Ligação com o Cálculo de Liga: `corridaId`. Novo certificado a partir da corrida traz corrida ("ref-anual"),
   material (liga), OP da liga e a **análise do laboratório** (ou do retorno gerado). A conferência usa as

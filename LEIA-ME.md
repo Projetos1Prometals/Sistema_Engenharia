@@ -72,7 +72,7 @@ Traz o histórico das abas **Controle Corrida 2023, 2024…**: nº anual, recarg
 - **Entrada manual**: material que não está no cadastro (forma perdida, retorno sem análise), com kg e composição.
 - **Amostras do dia** (menu Cálculo de Liga, ou botão na lista de corridas): escolha a data e marque as corridas. **Imprimir etiquetas** imprime a etiqueta do saquinho das amostras e uma etiqueta para cada retorno (10 × 5 cm, com Peso em branco e a COR da liga — cadastre a cor em **Ligas e normas**). **Imprimir formulário A4** imprime a solicitação de análise da Priner com uma linha por corrida (os dados fixos ficam em **Dados do formulário**). Na impressora de etiquetas, escolha papel 100 × 50 mm, sem margens e escala 100%.
 - **Imprimir boletim**: a mesma folha "Boletim de Corrida" da planilha, em uma página A4: dados de produção, carga metálica (Elemento / Solicitado / Recarga, com os códigos MP do NW) e as 12 linhas de ligas sempre na mesma ordem.
-- **Laboratório**: o resultado real da corrida fica ao lado do estimado. O botão **Gerar retorno desta corrida** cria o retorno (ex.: `64-257-CRK`) já com a análise; o peso pode ser informado depois, na tela Retornos.
+- **Retorno da corrida**: ao salvar a corrida, o sistema cria sozinho o retorno dela (ex.: `64-257-CRK`), sem peso. Quando o resultado do laboratório é salvo, a análise vai para o retorno. Pese e informe o kg na tela **Retornos** (filtro "Sem peso") ou no botão **Atualizar retorno** da corrida.
 - **Ligação futura com o PCP**: cada corrida guarda a **FS** e as **OPs**; nas próximas etapas, a Instrução de Processo vai usar o **código do produto**.
 
 ## Incluir uma pessoa nova
@@ -105,6 +105,6 @@ O plano gratuito do Firebase (Spark) cobre a Engenharia com folga: 1 GB de dados
 - **Edição**: clique em qualquer campo da folha e digite — **salva sozinho**. Cole uma linha de valores do Excel/espectrômetro no campo **C** para preencher a análise inteira.
 - **Conferência** (não imprime): compara a análise com a norma da liga em **Ligas e normas** e marca o que estiver fora.
 - **Análise chegou depois?** No certificado, **Trazer a análise da corrida**.
-- **Imprimir / PDF**: botão no alto ou `Ctrl+P` — folha A4, mesmo formato de antes. Na busca, marque vários e **Imprimir selecionados**.
+- **Imprimir / PDF**: botão no alto ou `Ctrl+P` — folha A4, mesmo formato de antes. Com muitos itens, sai em **2 folhas ou mais** (os itens continuam na folha seguinte, com assinatura e "Página 1 de 2"). Na busca, marque vários e **Imprimir selecionados**.
 - **Assinatura e backup**: imagem da assinatura e cópia de segurança. Para trazer os certificados do app antigo: lá, **Backup → Exportar backup (.json)**; aqui, **Assinatura e backup → Escolher o backup**. Os que tiverem a corrida no formato `33-229` são ligados sozinhos à corrida.
 - O resultado do laboratório da corrida agora tem os **20 elementos** do certificado (P, Co, Pb, Sn, B, Mg e Fe a mais).

@@ -91,6 +91,22 @@ h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)
 .etq-peso{font-size:16pt;font-weight:700;margin-top:2.5mm}
 .etq-cor{font-size:12pt;font-weight:700;margin-top:auto;display:flex;gap:2mm;align-items:flex-end}
 .etq-branco{display:inline-block;width:45mm;border-bottom:0.3mm solid #000}
+/* etiqueta do retorno em meia folha A4 (duas por folha, cortar na linha tracejada) */
+.pg-meia{width:210mm;height:296mm;background:#fff;box-sizing:border-box;overflow:hidden}
+.meia{height:148mm;box-sizing:border-box;padding:10mm;display:flex}
+.meia:first-child{border-bottom:0.3mm dashed #888}
+.etq.etq-meia{width:100%;height:100%;padding:9mm 11mm;border:0.6mm solid #000;border-radius:5mm}
+.etq-meia .etq-cab,.etq-meia .etq-lin{grid-template-columns:38% 34% 28%}
+.etq-meia .etq-cab span{font-size:22pt}
+.etq-meia .etq-lin{margin-top:4mm}
+.etq-meia .etq-lin.grande b:first-child{font-size:36pt}
+.etq-meia .etq-lin .etq-mat{font-size:24pt;white-space:normal;line-height:1.1}
+.etq-meia .etq-lin .etq-data{font-size:17pt}
+.etq-meia .etq-peso{font-size:34pt;margin-top:10mm}
+.etq-meia .etq-cor{font-size:28pt;gap:4mm}
+.etq-meia .etq-branco{width:100mm;border-bottom-width:0.5mm}
+.prev-ret{display:flex;flex-wrap:wrap;gap:16px;background:#7a7a7a;padding:16px;border-radius:8px;overflow:auto}
+.prev-ret .pg-meia{zoom:.45;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .prev-etq{display:flex;flex-wrap:wrap;gap:12px}
 .prev-etq .etq{border:1px dashed #999;border-radius:3mm;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .prev-a4{overflow:auto;background:#7a7a7a;padding:16px;border-radius:8px}
@@ -116,6 +132,7 @@ h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)
 #areaImpressao{display:none}
 @page etiqueta{size:100mm 50mm;margin:0}
 @page folhaA4{size:A4 portrait;margin:10mm 12mm}
+@page folhaRetorno{size:A4 portrait;margin:0}
 @media print{
   body.imprimindo-amostras > *:not(#areaImpressao){display:none!important}
   body.imprimindo-amostras #areaImpressao{display:block}
@@ -123,5 +140,7 @@ h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)
   .pg-etq{page:etiqueta;break-after:page;width:100mm;height:50mm;overflow:hidden}
   .pg-etq:last-child{break-after:auto}
   .pg-a4{page:folhaA4}
+  .pg-meia{page:folhaRetorno;break-after:page}
+  .pg-meia:last-child{break-after:auto}
   #areaImpressao *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }

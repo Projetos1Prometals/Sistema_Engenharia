@@ -135,3 +135,54 @@ function prodsHTML(r, ed, F) {
   if (ed) h += `<button class="padd" data-act="addProd" tabindex="-1">+ Adicionar produto</button>`;
   return `<div class="prods" style="position:relative">${h}</div>`;
 }
+
+// =====================================================================
+//  MAIS DE UMA FOLHA: quando os produtos/itens não cabem, a folha 1 sai
+//  completa (com análise e assinatura) e os itens que sobram vão para as
+//  folhas seguintes, com cabeçalho, identificação, assinatura e rodapé.
+// =====================================================================
+// cada produto vira unidades: o título (j = -1) e cada linha (j = 0, 1…)
+export function unidadesProdutos(produtos) {
+  const u = [];
+  (produtos || []).forEach((p, i) => { u.push({ i, j: -1 }); (p.linhas || []).forEach((l, j) => u.push({ i, j })); });
+  return u;
+}
+// produtos de um pedaço [a, b) das unidades; produto cortado ao meio repete o título com "(continuação)"
+export function produtosParte(produtos, u, a, b, continua) {
+  const out = []; let ult = null;
+  for (let k = a; k < b; k++) {
+    const { i, j } = u[k], p = produtos[i];
+    if (ult !== i) { out.push({ titulo: (p.titulo || '') + (j >= 0 ? ' (continuação)' : ''), linhas: [] }); ult = i; }
+    if (j >= 0) out[out.length - 1].linhas.push(p.linhas[j]);
+  }
+  if (continua) out.push({ titulo: 'Continua na folha seguinte →', linhas: [] });
+  return out;
+}
+export const rotuloPagina = (r, p, total) => {
+  const t = String(r.pagina || '').trim();
+  return !t || /^\d+\s*de\s*\d+$/i.test(t) ? `${p} de ${total}` : t;
+};
+
+export function certContinuacao(r, { assinatura = '', logo = '', pagina = '' } = {}) {
+  const V = k => esc(r[k] ?? '');
+  const lab = (span, t) => `<td colspan="${span}" class="lab">${t}</td>`;
+  const val = (span, v, cls = 'val') => `<td colspan="${span}" class="${cls}">${v}</td>`;
+  const secF = t => `<tr style="height:18pt"><td colspan="12" class="sec">${t}</td></tr>`;
+  const sig = r.mostrarAssinatura !== false && assinatura ? `<img class="sig" src="${assinatura}" alt="">` : '';
+  return `<table class="cert"><colgroup>${'<col>'.repeat(12)}</colgroup>
+    <tr style="height:19.5pt"><td colspan="5" rowspan="3" class="logo"><img src="${logo}" alt="Prometals"></td><td colspan="7"></td></tr>
+    <tr style="height:19.5pt">${val(7, V('titulo'), 'ttl')}</tr>
+    <tr style="height:18pt">${val(7, V('subtitulo'), 'sub')}</tr>
+    <tr class="bar" style="height:3.75pt"><td colspan="12"></td></tr>
+    ${secF('IDENTIFICAÇÃO DO DOCUMENTO (continuação)')}
+    <tr style="height:17.1pt">${lab(2, 'Certificado Nº')}${val(4, V('certNo'))}${lab(2, 'Data de emissão')}${val(4, V('dataEmissao'))}</tr>
+    <tr style="height:17.1pt">${lab(2, 'Corrida / Lote')}${val(4, V('corrida'), 'val c')}${lab(2, 'Página')}${val(4, esc(pagina))}</tr>
+    <tr style="height:17.1pt">${lab(2, 'Cliente')}${val(10, V('cliente'))}</tr>
+    <tr><td colspan="12" class="prtd">${prodsHTML(r, false, () => '')}</td></tr>
+    <tr class="sp" style="height:6pt"><td colspan="12"></td></tr>
+    <tr style="height:15.75pt">${val(6, V('aprovadoPor'), 'apr')}<td colspan="6" class="apr">Data:&nbsp; ${esc(r.dataEmissao || r.dataAprovacao || '')}</td></tr>
+    <tr style="height:25.5pt">${val(6, V('analista'), 'ana')}<td colspan="6" class="asg"><div class="asgw">${esc(r.assinaturaLabel || 'Assinatura:')} ________________________________${sig}</div></td></tr>
+    <tr class="sp" style="height:6pt"><td colspan="12"></td></tr>
+    <tr style="height:27.75pt">${val(3, V('rodapeMarca'), 'ft ftb')}${val(6, V('rodapeEndereco'), 'ft fts')}${val(3, V('rodapeTelefones'), 'ft fts')}</tr>
+  </table>`;
+}

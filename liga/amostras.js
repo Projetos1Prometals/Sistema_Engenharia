@@ -1,7 +1,7 @@
 // =====================================================================
 //  liga/amostras.js — impressos das amostras do dia (sem banco)
 //   - Etiqueta do saquinho das amostras do dia (10 x 5 cm): corridas, material, data
-//   - Etiqueta do retorno (10 x 5 cm), uma por corrida: corrida, material, data, peso, cor
+//   - Etiqueta do retorno (meia folha A4, duas por folha), uma por corrida: corrida, material, data, peso, cor
 //   - Formulário A4 do laboratório (Priner, LT-FO-023): uma linha por corrida
 // =====================================================================
 
@@ -38,14 +38,22 @@ export function etiquetasSaquinho(corridas, data) {
   </div>`);
 }
 
-// ---------- etiqueta do retorno (uma por corrida) ----------
+// ---------- etiqueta do retorno (uma por corrida, meia folha A4) ----------
 export function etiquetaRetorno(c, cor) {
-  return `<div class="etq etq-ret">
+  return `<div class="etq etq-ret etq-meia">
     <div class="etq-cab"><span>Corrida</span><span>Material</span><span>Data</span></div>
     <div class="etq-lin grande"><b>${esc(corridaEtiqueta(c))}</b><b class="etq-mat">${esc(material(c))}</b><b class="etq-data">${esc(dataEtiqueta(c.data))}</b></div>
     <div class="etq-peso">Peso:</div>
     <div class="etq-cor">COR: ${cor ? esc(cor) : '<span class="etq-branco"></span>'}</div>
   </div>`;
+}
+
+// junta as etiquetas dos retornos de duas em duas (uma folha A4 = duas metades)
+export function folhasRetorno(etiquetas) {
+  const folhas = [];
+  for (let i = 0; i < etiquetas.length; i += 2)
+    folhas.push(`<div class="pg-meia"><div class="meia">${etiquetas[i]}</div><div class="meia">${etiquetas[i + 1] || ''}</div></div>`);
+  return folhas;
 }
 
 // ---------- formulário A4 do laboratório ----------
