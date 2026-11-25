@@ -1,7 +1,8 @@
 // =====================================================================
 //  liga/amostras.js — impressos das amostras do dia (sem banco)
 //   - Etiqueta do saquinho das amostras do dia (10 x 5 cm): corridas, material, data
-//   - Etiqueta do retorno (meia folha A4, duas por folha), uma por corrida: corrida, material, data, peso, cor
+//   - Etiqueta do retorno, uma por corrida: corrida, material, data, peso, cor
+//     (10 x 5 cm junto com as do saquinho, ou meia folha A4, duas por folha)
 //   - Formulário A4 do laboratório (Priner, LT-FO-023): uma linha por corrida
 // =====================================================================
 
@@ -38,9 +39,9 @@ export function etiquetasSaquinho(corridas, data) {
   </div>`);
 }
 
-// ---------- etiqueta do retorno (uma por corrida, meia folha A4) ----------
-export function etiquetaRetorno(c, cor) {
-  return `<div class="etq etq-ret etq-meia">
+// ---------- etiqueta do retorno (uma por corrida; 10 x 5 cm ou, com meia = true, meia folha A4) ----------
+export function etiquetaRetorno(c, cor, meia) {
+  return `<div class="etq etq-ret${meia ? ' etq-meia' : ''}">
     <div class="etq-cab"><span>Corrida</span><span>Material</span><span>Data</span></div>
     <div class="etq-lin grande"><b>${esc(corridaEtiqueta(c))}</b><b class="etq-mat">${esc(material(c))}</b><b class="etq-data">${esc(dataEtiqueta(c.data))}</b></div>
     <div class="etq-peso">Peso:</div>
@@ -113,7 +114,7 @@ export const CORES_RETORNO = [
   [['SFK'], 'VERDE'],
   [['CRK', 'DRK'], 'LARANJA'],
   [['304', 'CF8'], 'AMARELO'],
-  [['A-532', 'FB'], 'BRANCO'],
+  [['A-532 (FB)', 'A-532', 'FB'], 'BRANCO'],
   [['4320'], 'AZUL'],
   [['1045'], 'VERDE FLUORESCENTE'],
   [['316', 'CF8M'], 'ROXO / VIOLETA'],

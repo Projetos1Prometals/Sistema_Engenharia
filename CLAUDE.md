@@ -25,10 +25,17 @@ Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
 
 ### Retorno automático (`retornoAutomatico()` em `liga.js`)
 - Toda corrida **do sistema** (não as importadas) gera/atualiza o seu retorno ao ser salva: código
-  `ref-anual-LIGA`, `kgVerificado` 0 até pesar (tela Retornos, filtro "Sem peso"), análise = resultado real
+  `ref-anual-LIGA` (liga com sigla entre parênteses usa só a sigla: "A-532 (FB)" → `34-227-FB`, `siglaLiga()`), `kgVerificado` 0 até pesar (tela Retornos, filtro "Sem peso"), análise = resultado real
   do laboratório, `auto: true`, `corridaId`. O código fica em `corrida.retornoGerado`.
 - Se a liga/número mudar, ou a corrida for excluída, o retorno automático é renomeado/apagado **só** se ainda
   não tiver peso, baixa nem uso em outra corrida. O botão "Atualizar retorno" da ficha serve para peso e código à mão.
+
+### PDF do laboratório (`laudo.js`)
+- Ficha da corrida → "Ler PDF do laboratório…": lê o certificado de análise da Priner (FOR-LAB-0035) com
+  pdf.js (cdnjs, carregado só quando precisa) e preenche `real` (tabela "Composição / Resultado", valor → símbolo
+  de x mais próximo), `lab.relatorio` (nº do certificado), `lab.data` (emissão) e `lab.empresa` se vazia.
+- Confere "CORRIDA 34 - 227" com refratário-anual da ficha (pergunta se não bater). Não salva sozinho nem guarda o PDF.
+- PDF escaneado (sem texto) não funciona: avisa para digitar à mão.
 
 ### Boletim impresso (Ctrl+P / "Imprimir boletim")
 Imita a folha "Boletim de Corrida" da planilha, que o forneiro já conhece: uma página A4, Arial,
@@ -43,7 +50,7 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 
 ### Amostras do dia (`#/amostras`, `amostras.js`)
 - Com as corridas de uma data: **etiqueta do saquinho** das amostras (10 × 5 cm; corrida, material, data;
-  até 4 corridas por etiqueta), **etiqueta de cada retorno** (meia folha A4, duas por folha, linha tracejada para cortar; corrida, material, data, "Peso:" em
+  até 4 corridas por etiqueta), **etiqueta de cada retorno** (meia folha A4, duas por folha, linha tracejada para cortar — ou, marcando "Retornos também em etiqueta 10 × 5", junto com as do saquinho; corrida, material, data, "Peso:" em
   branco, COR = `liga.cor` cadastrada em Ligas e normas ou, sem ela, a tabela `CORES_RETORNO` de
   `amostras.js`, copiada da folha "Cores (retorno)" da fundição; 310 e VC-131 = tambor de retorno de terceiro) e o **formulário A4 do laboratório Priner**
   (LT-FO-023; dados fixos em `config.liga.priner`, botão "Dados do formulário").

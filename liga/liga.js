@@ -4,14 +4,15 @@
 //  Sucatas e ferroligas, Configurações (forno, contadores, importação, backup).
 // =====================================================================
 import * as banco from '../comum/banco.js';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo } from '../comum/casca.js';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo, podeEditar } from '../comum/casca.js';
 import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,
-} from './calculo.js?v=1.4.0';
+} from './calculo.js?v=1.5.0';
+import { lerLaudo } from './laudo.js?v=1.5.0';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
-import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.4';
+import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.5';
 
 // ---------------------------------------------------------------------
 // Estado (dados que chegam do banco)
@@ -79,12 +80,15 @@ async function semearSePreciso() {
   if (!confirmado) return;
   S.semeado = true;
   const ops = [];
-  if (!S.ligas.length) LIGAS_INICIAIS.forEach((l, i) => ops.push({ col: COL.ligas, id: normLiga(l.nome), dados: { ...l, ordem: i } }));
+  if (!S.ligas.length) LIGAS_INICIAIS.forEach((l, i) => { const { id, ...dados } = l; ops.push({ col: COL.ligas, id: id || normLiga(l.nome), dados: { ...dados, ordem: i } }); });
+  // 2026-11: a liga "FB" passou a se chamar "A-532 (FB)" (o retorno continua 34-227-FB; o FB vira apelido)
+  const fb = S.ligas.find(l => l.nome === 'FB');
+  if (fb && podeEditar()) ops.push({ col: COL.ligas, id: fb.id, dados: { ...semMeta(fb), nome: 'A-532 (FB)', apelidos: [...new Set(['FB', ...(fb.apelidos || [])])] } });
   if (!S.materiais.length) MATERIAIS_INICIAIS.forEach(m => ops.push({ col: COL.materiais, id: m.id, dados: m }));
   if (!S.config) ops.push({ col: COL.config, id: 'liga', dados: CONFIG_INICIAL });
   if (ops.length) {
-    await banco.emLote(ops);
-    aviso('Primeiro acesso: ligas, sucatas e ferroligas carregadas da planilha.');
+    try { await banco.emLote(ops); } catch (e) { console.warn('semear', e); return; }
+    if (ops.length > 1 || !fb) aviso('Primeiro acesso: ligas, sucatas e ferroligas carregadas da planilha.');
   }
 }
 
@@ -447,6 +451,10 @@ function paginaCorrida(id) {
     const box = C.querySelector('#boxLab');
     const lab = d.lab || {};
     box.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <label class="btn peq pri" title="Lê o PDF do certificado de análise (Priner) e preenche a análise, o nº do certificado e a data">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
+        <span class="mut" id="stLaudo">Preenche sozinho com o certificado de análise que o laboratório manda.</span>
+      </div>
       <div class="linha-campos" style="margin-bottom:12px">
         <label class="campo">Laboratório / empresa${ent('data-lab="empresa"', lab.empresa)}</label>
         <label class="campo">O.S.${ent('data-lab="os"', lab.os)}</label>
@@ -466,7 +474,33 @@ function paginaCorrida(id) {
         ${ed.id ? `<a class="btn peq" href="${banco.raiz('certificados/index.html')}#/novo?corrida=${encodeURIComponent(ed.id)}" title="Cria o certificado de qualidade já com a análise desta corrida">${icone('certificado')} Novo certificado</a>` : ''}
         <span id="certsDaCorrida"></span>
       </div>`;
+    box.querySelector('#arqLaudo').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) lerPdfLaboratorio(f); };
     if (ed.id) mostrarCertificados();
+  }
+  // PDF do certificado de análise → resultado real, nº do relatório e data (o usuário confere e salva)
+  async function lerPdfLaboratorio(arquivo) {
+    const st = C.querySelector('#stLaudo');
+    if (!/pdf$/i.test(arquivo.type) && !/\.pdf$/i.test(arquivo.name)) return aviso('Escolha o arquivo PDF do laboratório.', 'erro');
+    if (st) st.textContent = 'Lendo o PDF…';
+    let r;
+    try { r = await lerLaudo(arquivo); }
+    catch (e) { console.error(e); if (st) st.textContent = ''; return aviso('Não consegui ler o PDF: ' + e.message, 'erro'); }
+    const lidos = Object.keys(r.analise);
+    if (!lidos.length) { if (st) st.textContent = ''; return aviso('Não achei a tabela de resultados neste PDF. Digite a análise à mão.', 'erro'); }
+    // Confere se o PDF é desta corrida ("CORRIDA 34 - 227" = refratário 34, anual 227)
+    const n = normalizar(d);
+    if (r.corrida && (r.corrida.refratario !== n.refratario || r.corrida.anual !== n.anual)
+      && !confirm(`O PDF é da corrida ${r.corrida.refratario}-${r.corrida.anual}, mas esta ficha é a corrida ${numeroCorrida(n)}.\n\nUsar a análise deste PDF mesmo assim?`)) { if (st) st.textContent = ''; return; }
+    const comVirgula = v => String(v).replace('.', ',');
+    for (const e of lidos) if ([...ELEMENTOS, ...ELEMENTOS_LAB_EXTRA].includes(e)) d.real[e] = comVirgula(r.analise[e]);
+    if (r.laboratorio && !d.lab.empresa) d.lab.empresa = r.laboratorio;
+    if (r.relatorio) d.lab.relatorio = r.relatorio;
+    if (r.emissao) d.lab.data = r.emissao;
+    montarLab(); marcarSujo(); atualizarContas();
+    const fora = lidos.filter(e => ![...ELEMENTOS, ...ELEMENTOS_LAB_EXTRA].includes(e));
+    const st2 = C.querySelector('#stLaudo');
+    if (st2) st2.innerHTML = `<span class="txt-az">Lido: ${esc(arquivo.name)} — ${lidos.length - fora.length} elementos${r.relatorio ? ', certificado ' + esc(r.relatorio) : ''}.</span> Confira e clique em <b>Salvar corrida</b>.`;
+    aviso('Análise do laboratório preenchida pelo PDF. Confira e salve a corrida.');
   }
   // Certificados já emitidos para esta corrida (lidos uma vez, só para mostrar o atalho)
   async function mostrarCertificados() {
@@ -771,7 +805,7 @@ function retornoAutomatico(n, liga, corridaId, opc) {
   return codigo;
 }
 
-const amostras = { data: null, fora: new Set(), copias: 1 };
+const amostras = { data: null, fora: new Set(), copias: 1, retornos: false };
 function paginaAmostras() {
   marcarMenu('amostras');
   definirTrilha(['Cálculo de Liga', 'Amostras do dia']);
@@ -780,7 +814,7 @@ function paginaAmostras() {
   C.innerHTML = `
     <div class="cab">
       <a class="btn" href="#/corridas">${icone('voltar')}</a>
-      <div class="cresce"><h1 class="titulo">Amostras do dia</h1><p class="sub">Etiqueta do saquinho das amostras (10 × 5 cm), etiqueta de cada retorno (meia folha A4, duas por folha) e o formulário do laboratório (A4), com as corridas do dia.</p></div>
+      <div class="cresce"><h1 class="titulo">Amostras do dia</h1><p class="sub">Etiqueta do saquinho das amostras (10 × 5 cm), etiqueta de cada retorno (meia folha A4, duas por folha, ou 10 × 5 cm) e o formulário do laboratório (A4), com as corridas do dia.</p></div>
       <button class="btn" id="btDadosLab">${icone('engrenagem')} Dados do formulário</button>
     </div>
     <div class="cartao"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -790,13 +824,14 @@ function paginaAmostras() {
       <button class="btn" id="btHoje">Hoje</button>
       <span class="cresce"></span>
       <label class="campo" style="width:auto">Cópias da etiqueta do saquinho<input class="ent num" id="aCopias" inputmode="numeric" value="${f.copias}" style="width:90px"></label>
-      <button class="btn pri" id="btImprEtq">${icone('impressora')} Imprimir etiquetas do saquinho</button>
+      <label class="opcao" style="margin:0"><input type="checkbox" id="aRet" ${f.retornos ? 'checked' : ''}> Retornos também em etiqueta 10 × 5</label>
+      <button class="btn pri" id="btImprEtq">${icone('impressora')} Imprimir etiquetas</button>
       <button class="btn pri" id="btImprRet">${icone('impressora')} Imprimir retornos (A4)</button>
       <button class="btn pri" id="btImprA4">${icone('impressora')} Imprimir formulário A4</button>
     </div></div>
     <div class="cartao"><h2>Corridas do dia<span class="cresce"></span><span class="mut" id="aResumo" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2><div class="tab-wrap" id="aTab"></div></div>
     <div id="aAvisos"></div>
-    <div class="cartao"><h2>Etiquetas do saquinho (10 × 5 cm, tamanho real)</h2><div class="corpo"><div class="prev-etq" id="aEtq"></div></div></div>
+    <div class="cartao"><h2>Etiquetas 10 × 5 cm (tamanho real)</h2><div class="corpo"><div class="prev-etq" id="aEtq"></div></div></div>
     <div class="cartao"><h2>Etiquetas dos retornos (meia folha A4, duas por folha)</h2><div class="corpo"><div class="prev-ret" id="aRetPrev"></div></div></div>
     <div class="cartao"><h2>Formulário do laboratório (A4)</h2><div class="corpo"><div class="prev-a4"><div class="prev-a4-in" id="aA4"></div></div></div></div>`;
 
@@ -806,9 +841,10 @@ function paginaAmostras() {
   C.querySelector('#btDiaProx').onclick = () => mudarDia(+1);
   C.querySelector('#btHoje').onclick = () => { f.data = hoje(); f.fora.clear(); C.querySelector('#aData').value = f.data; atualizar(); };
   C.querySelector('#aCopias').oninput = e => { f.copias = Math.max(0, Math.min(10, Math.round(num(e.target.value) || 0))); atualizar(); };
+  C.querySelector('#aRet').onchange = e => { f.retornos = e.target.checked; atualizar(); };
   C.querySelector('#aTab').onchange = e => { const ck = e.target.closest('[data-ck]'); if (ck) { ck.checked ? f.fora.delete(ck.dataset.ck) : f.fora.add(ck.dataset.ck); atualizar(); } };
   C.querySelector('#btDadosLab').onclick = editarDadosLab;
-  C.querySelector('#btImprEtq').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); if (!x.etiquetas.length) return aviso('Cópias da etiqueta do saquinho = 0.', 'erro'); imprimirAmostras(x.etiquetas.map(h => `<div class="pg-etq">${h}</div>`).join('')); };
+  C.querySelector('#btImprEtq').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); if (!x.etiquetas.length) return aviso('Nenhuma etiqueta: cópias do saquinho = 0 e retornos em 10 × 5 desmarcado.', 'erro'); imprimirAmostras(x.etiquetas.map(h => `<div class="pg-etq">${h}</div>`).join('')); };
   C.querySelector('#btImprRet').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(x.retornos.join('')); };
   C.querySelector('#btImprA4').onclick = () => { const x = montar(); if (!x.sel.length) return aviso('Nenhuma corrida marcada.', 'erro'); imprimirAmostras(`<div class="pg-a4">${x.form}</div>`); };
 
@@ -821,13 +857,14 @@ function paginaAmostras() {
     const saq = sel.length ? etiquetasSaquinho(sel, f.data) : [];
     const etiquetas = [];
     for (let i = 0; i < f.copias; i++) etiquetas.push(...saq);
-    const retornos = folhasRetorno(sel.map(c => etiquetaRetorno(c, corDaLiga(c.liga))));
+    if (f.retornos) sel.forEach(c => etiquetas.push(etiquetaRetorno(c, corDaLiga(c.liga))));
+    const retornos = folhasRetorno(sel.map(c => etiquetaRetorno(c, corDaLiga(c.liga), true)));
     return { sel, etiquetas, retornos, form: formularioPriner(sel, f.data, cfg().priner) };
   }
   function atualizar() {
     const lista = doDia();
     const x = montar();
-    C.querySelector('#aResumo').textContent = lista.length ? `${x.sel.length} de ${lista.length} marcadas · ${x.etiquetas.length} etiqueta(s) do saquinho · ${x.retornos.length} folha(s) A4 de retorno` : '';
+    C.querySelector('#aResumo').textContent = lista.length ? `${x.sel.length} de ${lista.length} marcadas · ${x.etiquetas.length} etiqueta(s) 10 × 5 ·${x.retornos.length} folha(s) A4 de retorno` : '';
     C.querySelector('#aTab').innerHTML = !lista.length ? `<div class="vazio">Nenhuma corrida em ${fmtData(f.data)}. Escolha outra data.</div>` : `
       <table class="tab"><thead><tr><th style="width:34px"></th><th>Corrida</th><th>Liga</th><th>Cor do retorno</th><th>FS / OPs</th><th>Retorno gerado</th></tr></thead><tbody>
       ${lista.map(c => { const l = ligaDe(c.liga); return `<tr>

@@ -29,7 +29,7 @@ export function acharLiga(ligas, nome) {
     ligas.find(l => (l.apelidos || []).some(a => normLiga(a) === n)) || null;
 }
 
-// Mesma liga? (considera apelidos: FB = A-532, DF = DRF…)
+// Mesma liga? (considera apelidos: A-532 (FB) = FB = A-532, DF = DRF…)
 export function mesmaLiga(ligas, a, b) {
   const la = acharLiga(ligas, a), lb = acharLiga(ligas, b);
   if (la && lb) return la.id === lb.id;
@@ -137,8 +137,13 @@ export function numeroCorrida(c) {
   return `${ref} / ${an}`;
 }
 
+// Liga com sigla entre parênteses ("A-532 (FB)") usa só a sigla no código: 34-227-FB
+export function siglaLiga(nome) {
+  const m = /\(([^)]+)\)\s*$/.exec(String(nome || ''));
+  return m ? m[1].trim() : String(nome || '').trim();
+}
 export function codigoRetornoDaCorrida(c, nomeLiga) {
-  return `${c.refratario ?? ''}-${c.anual ?? ''}-${nomeLiga || c.liga || ''}`.replace(/^-+|-+$/g, '');
+  return `${c.refratario ?? ''}-${c.anual ?? ''}-${siglaLiga(nomeLiga || c.liga || '')}`.replace(/^-+|-+$/g, '');
 }
 
 export function idCorrida(c) {

@@ -4,7 +4,7 @@
 // =====================================================================
 import * as banco from './banco.js';
 
-export const VERSAO = '1.4.4';
+export const VERSAO = '1.5.0';
 
 // ---------- quem pode editar ----------
 // Só a Engenharia edita; os outros setores (almoxarifado, comercial…) só consultam.
