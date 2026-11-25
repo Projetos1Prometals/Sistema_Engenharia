@@ -10,7 +10,7 @@ import {
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,
 } from './calculo.js?v=1.5.1';
 import { lerLaudoOuAvisar } from './laudo.js?v=1.5.6';
-import { criarCertificadosAuto, codigoRetornoDoCert, COL_CERTS } from '../certificados/auto.js?v=1.5.5';
+import { criarCertificadosAuto, codigoRetornoDoCert, COL_CERTS } from '../certificados/auto.js?v=1.5.7';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
 import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.5';

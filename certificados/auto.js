@@ -61,26 +61,39 @@ function certificadoDoRetorno(r, { certs, ligas, corridas }) {
 }
 
 const criadosNestaSessao = new Set();
-// Cria os certificados que faltam. dados = { retornos, certs, corridas, ligas }; banco = módulo comum/banco.js.
-// Devolve a lista de certificados criados.
-export async function criarCertificadosAuto(dados, banco) {
+// Retornos com análise que nenhum certificado segue (para o botão "Retornos sem certificado": todos, até os da planilha)
+export function retornosSemCertificado(dados) {
   const { retornos = [], certs = [] } = dados;
   const seguidos = new Set(certs.map(c => codigoRetornoDoCert(c, dados)).filter(Boolean));
-  const faltam = retornos.filter(r => r.codigo && r.origem !== 'planilha' && temAnalise(r.analise)
-    && !r.certificadoAuto && !seguidos.has(r.codigo) && !criadosNestaSessao.has(r.codigo));
+  return retornos.filter(r => r.codigo && temAnalise(r.analise) && !seguidos.has(r.codigo) && !criadosNestaSessao.has(r.codigo));
+}
+// Cria sozinho os que faltam: menos os da planilha e os que já tiveram certificado (excluído depois).
+// dados = { retornos, certs, corridas, ligas }; banco = módulo comum/banco.js. Devolve os certificados criados.
+export function criarCertificadosAuto(dados, banco) {
+  return criarCertificadosDe(retornosSemCertificado(dados).filter(r => r.origem !== 'planilha' && !r.certificadoAuto), dados, banco);
+}
+// Cria um certificado para cada retorno da lista
+export async function criarCertificadosDe(faltam, dados, banco) {
   const criados = [];
-  const todos = certs.slice();
+  const todos = (dados.certs || []).slice();
   for (const r of faltam) {
+    if (criadosNestaSessao.has(r.codigo)) continue;
     criadosNestaSessao.add(r.codigo);
     const c = certificadoDoRetorno(r, { ...dados, certs: todos });
     const u = banco.usuario();
     c.alteradoEm = Date.now(); c.alteradoPor = u && banco.modo() === 'firebase' ? u.email : '';
     const { id, ...semId } = c;
     const ret = { ...r }; delete ret.id; delete ret._em; delete ret._por;
-    await banco.emLote([
-      { col: COL_CERTS, id, dados: semId },
-      { col: COL.retornos, id: r.id || banco.idSeguro(r.codigo), dados: { ...ret, certificadoAuto: id } },
-    ]);
+    try {
+      await banco.emLote([
+        { col: COL_CERTS, id, dados: semId },
+        { col: COL.retornos, id: r.id || banco.idSeguro(r.codigo), dados: { ...ret, certificadoAuto: id } },
+      ]);
+    } catch (e) {
+      criadosNestaSessao.delete(r.codigo);   // deixa tentar de novo
+      e.message = `retorno ${r.codigo}: ${e.message}`;
+      throw e;
+    }
     todos.push(c); criados.push(c);
   }
   return criados;

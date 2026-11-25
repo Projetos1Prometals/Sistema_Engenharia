@@ -118,6 +118,8 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   análise, que não seja da planilha e que nenhum certificado siga, ganha um certificado (corrida, material, OP da liga se
   houver corrida, análise; cliente/produtos em branco). Roda ao salvar o retorno (Cálculo de Liga) e ao abrir Certificados.
   O retorno guarda `certificadoAuto` = id do certificado: excluído o certificado, **não** é criado de novo.
+  Botão "Retornos sem certificado" (lista de Certificados): mostra **todos** os retornos com análise sem certificado
+  (`retornosSemCertificado()`), inclusive da planilha e os de certificado excluído, para criar à mão (`criarCertificadosDe()`).
 - Análise do certificado: 20 elementos = `ELEMENTOS` + `ELEMENTOS_LAB_EXTRA` (P, Co, Pb, Sn, B, Mg, Fe),
   que também aparecem no resultado do laboratório da corrida.
 - Importa o backup .json do app antigo (`{sistema:'certificados-prometals', certs, assinatura}`) e liga

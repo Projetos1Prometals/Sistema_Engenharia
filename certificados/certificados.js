@@ -10,7 +10,7 @@ import * as banco from '../comum/banco.js';
 import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, baixarArquivo } from '../comum/casca.js';
 import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.5.1';
 import { lerLaudoOuAvisar } from '../liga/laudo.js?v=1.5.6';
-import { criarCertificadosAuto, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=1.5.5';
+import { criarCertificadosAuto, criarCertificadosDe, retornosSemCertificado, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=1.5.7';
 import {
   QALL, FIXED, DEF, clone, hojeBR, dateKey, abaFrom, setPath, fmtNum, parseNum, upgradeCert, setQuimica, SEC_AFTER_Q, shiftNum, certHTML,
   unidadesProdutos, produtosParte, rotuloPagina, certContinuacao,
@@ -41,8 +41,37 @@ async function verCertificadosAuto() {
   try {
     const novos = await criarCertificadosAuto(S, banco);
     if (novos.length) aviso(novos.length === 1 ? `Certificado criado para o retorno ${novos[0].criadoDoRetorno}.` : `${novos.length} certificados criados para os retornos com análise.`);
-  } catch (e) { console.warn('certificados automáticos', e); }
+  } catch (e) { console.error('certificados automáticos', e); aviso('Não consegui criar o certificado automático (' + e.message + ').', 'erro'); }
   finally { criandoAuto = false; }
+}
+// Botão "Retornos sem certificado": escolher quais retornos com análise ganham certificado (inclusive os da planilha)
+function escolherRetornosSemCert() {
+  const lista = retornosSemCertificado(S).sort((a, b) => String(b.codigo).localeCompare(String(a.codigo), 'pt', { numeric: true }));
+  if (!lista.length) { aviso('Todos os retornos com análise já têm certificado.'); return; }
+  janela({
+    titulo: 'Retornos sem certificado', larga: true,
+    html: `<p class="mut" style="margin-top:0">Retornos com análise do laboratório que nenhum certificado segue. Cada um marcado vira um certificado com corrida, material e análise (cliente e produtos em branco).</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn peq" id="mTodos">Marcar todos</button><button class="btn peq" id="mNenhum">Desmarcar todos</button><span class="cresce"></span><span class="mut" id="mN"></span></div>
+      <div class="tab-wrap" style="max-height:50vh;overflow:auto"><table class="tab"><thead><tr><th></th><th>Retorno</th><th>Liga</th><th>Relatório</th><th></th></tr></thead><tbody>
+        ${lista.map((r, i) => `<tr><td><input type="checkbox" data-i="${i}" ${r.origem === 'planilha' || r.certificadoAuto ? '' : 'checked'}></td><td><b>${esc(r.codigo)}</b></td><td>${esc(r.liga || '')}</td><td class="mut">${esc(r.relatorio || '')}</td>
+          <td class="mut" style="font-size:12px">${r.origem === 'planilha' ? 'veio da planilha' : ''}${r.certificadoAuto ? 'já teve certificado (excluído)' : ''}</td></tr>`).join('')}
+      </tbody></table></div>`,
+    aoAbrir: el => {
+      const caixas = () => [...el.querySelectorAll('[data-i]')];
+      const conta = () => { el.querySelector('#mN').textContent = caixas().filter(c => c.checked).length + ' marcado(s)'; };
+      el.querySelector('#mTodos').onclick = () => { caixas().forEach(c => { c.checked = true; }); conta(); };
+      el.querySelector('#mNenhum').onclick = () => { caixas().forEach(c => { c.checked = false; }); conta(); };
+      el.addEventListener('change', conta); conta();
+    },
+    botoes: [{ texto: 'Cancelar' }, { texto: 'Criar certificados', cls: 'pri', acao: async el => {
+      const escolhidos = [...el.querySelectorAll('[data-i]')].filter(c => c.checked).map(c => lista[+c.dataset.i]);
+      if (!escolhidos.length) { aviso('Marque pelo menos um retorno.', 'erro'); return false; }
+      try {
+        const novos = await criarCertificadosDe(escolhidos, S, banco);
+        aviso(novos.length === 1 ? 'Certificado criado: ' + novos[0].aba + '.' : novos.length + ' certificados criados.');
+      } catch (e) { console.error(e); aviso('Não consegui criar (' + e.message + ').', 'erro'); return false; }
+    } }],
+  });
 }
 const erro = e => { C.innerHTML = `<div class="faixa verm">${e && /permission/i.test(e.code || e.message || '') ? 'Seu usuário não tem permissão para ver os certificados.' : 'Erro ao ler o banco: ' + esc(e && (e.message || e.code))}</div>`; };
 banco.ouvirColecao(COL.certs, l => { S.certs = l.map(upgradeCert); chegou('certs'); }, erro);
@@ -174,7 +203,7 @@ function paginaLista() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Certificados de Qualidade</h1><p class="sub">Busque pela OP para ver em qual corrida ela está, ou por corrida, material, cliente, pedido, nº do certificado.</p></div>
-      ${ED ? `<button class="btn pri" id="btNovo">${icone('mais')} Novo certificado</button>` : ''}
+      ${ED ? `<button class="btn" id="btSemCert" title="Retornos com análise que ainda não têm certificado">${icone('reciclar')} Retornos sem certificado <b id="nSemCert"></b></button><button class="btn pri" id="btNovo">${icone('mais')} Novo certificado</button>` : ''}
     </div>
     <div class="cartao"><div class="corpo">
       <div class="busca grande">${icone('busca')}<input class="ent" id="q" placeholder="Digite a OP (ex.: 3323), a corrida (ex.: 33-229), o cliente…" value="${esc(busca.q)}" autocomplete="off"></div>
@@ -194,6 +223,7 @@ function paginaLista() {
   };
   setTimeout(() => q.focus(), 30);
   const bn = C.querySelector('#btNovo'); if (bn) bn.onclick = () => novoCertificado('');
+  const bs = C.querySelector('#btSemCert'); if (bs) bs.onclick = escolherRetornosSemCert;
   C.querySelector('#resbox').onclick = e => { const b = e.target.closest('[data-abrir]'); if (b) abrir(b.dataset.abrir); };
   C.querySelector('#btLimparSel').onclick = () => { busca.sel.clear(); atualizar(); };
   C.querySelector('#btImprSel').onclick = () => imprimir(S.certs.filter(c => busca.sel.has(c.id)).sort((a, b) => (b.ordem || 0) - (a.ordem || 0)));
@@ -215,6 +245,7 @@ function paginaLista() {
     C.querySelector('#btImprSel').disabled = !n;
   }
   function atualizar() {
+    const nsc = C.querySelector('#nSemCert'); if (nsc) { const n = retornosSemCertificado(S).length; nsc.textContent = n ? '(' + n + ')' : ''; }
     const qv = busca.q.trim();
     const numerico = /^\d{2,}$/.test(qv);
     const linhas = [], exatas = [];
