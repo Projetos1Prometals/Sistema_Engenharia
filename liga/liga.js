@@ -973,6 +973,7 @@ function editarRetorno(r) {
         <h4 style="margin:0">Análise do laboratório (%)</h4>
         <label class="btn peq pri" title="Lê o PDF do certificado de análise (Priner) e preenche a análise e o nº do relatório">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
         <span class="mut" id="stLaudo" style="font-size:12.5px"></span>
+        <span id="certsDoRet"></span>
       </div>
       <div class="tab-wrap"><table class="tab tab-comp"><thead><tr>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead>
         <tbody><tr>${ELEMENTOS.map(e => `<td>${entNum(`data-el="${e}"`, (r.analise || {})[e])}</td>`).join('')}</tr></tbody></table></div>
@@ -1005,6 +1006,13 @@ function editarRetorno(r) {
       } },
     ],
     aoAbrir: el => {
+      // Certificados que seguem a análise deste retorno (o escolhido no certificado ou o da corrida ligada)
+      if (!novo) banco.lerColecao('eng_certificados').then(certs => {
+        const porCorrida = new Map(S.corridas.map(c => [c.id, c.retornoGerado]));
+        const ligados = certs.filter(c => c.retorno !== '-' && (c.retorno || porCorrida.get(c.corridaId)) === r.codigo);
+        const box = el.querySelector('#certsDoRet');
+        if (box && ligados.length) box.innerHTML = `<span class="mut" style="font-size:12.5px">A análise também vai para:</span> ` + ligados.map(c => `<a class="pilula lar" href="${banco.raiz('certificados/index.html')}#/c/${encodeURIComponent(c.id)}">${icone('certificado')} ${esc(c.aba || c.corrida || 'certificado')}</a>`).join(' ');
+      }).catch(e => console.warn('certificados', e));
       el.querySelector('#arqLaudo').onchange = async e => {
         const f = e.target.files[0]; e.target.value = '';
         if (!f) return;

@@ -41,6 +41,7 @@ kbd{font:600 11px Consolas,monospace;border:1px solid var(--linha2);border-radiu
 .editing [data-f][contenteditable]:empty::before{content:attr(data-ph);color:#b9b4ab;font-style:italic;font-weight:400}
 .editing td.oos{box-shadow:inset 0 0 0 2px #e08a00!important;background:#fff4e0!important;font-weight:700}
 .editing td.inv{box-shadow:inset 0 0 0 2px #d93025!important;color:#d93025;font-weight:700}
+.papel td.dif{color:#d93025!important;font-weight:700}               /* diferente do retorno vinculado (só na tela) */
 .editing .prods{padding-bottom:30px}
 .editing .prod,.editing .plw{position:relative}
 .ptools{position:absolute;right:4px;top:3px;display:none;gap:4px;z-index:3}
@@ -100,6 +101,7 @@ kbd{font:600 11px Consolas,monospace;border:1px solid var(--linha2);border-radiu
 #areaImpressao .pagina-cert{width:210mm;height:296mm;padding:19.05mm 6.35mm 0;overflow:hidden;background:#fff}
 @page cert{size:A4 portrait;margin:0}
 @media print{
+  .papel td.dif{color:inherit!important;font-weight:inherit!important}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   html,body{background:#fff!important}
   body.imprimindo-cert > *:not(#areaImpressao){display:none!important}

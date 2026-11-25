@@ -69,6 +69,30 @@ const corridaDe = id => S.corridas.find(c => c.id === id);
 const nomeCorrida = c => `${c.refratario ?? '?'}-${c.anual ?? '?'}`;     // formato do certificado: "33-229"
 const descCorrida = c => `${numeroCorrida(c)} · ${c.liga || '?'} · ${fmtData(c.data)}${(c.ops || []).length ? ' · OP ' + c.ops.join(', ') : ''}${c.fs ? ' · ' + c.fs : ''}`;
 
+// ---- Vínculo certificado → retorno (só nesse sentido) ----
+// Retorno vinculado: o escolhido (cert.retorno) ou, sem escolha, o gerado pela corrida ligada. '-' = sem vínculo.
+function codigoRetornoDoCert(c) {
+  if (c.retorno === '-') return '';
+  return c.retorno || (corridaDe(c.corridaId) || {}).retornoGerado || '';
+}
+function retornoDoCert(c) { const cod = codigoRetornoDoCert(c); return cod ? S.retornos.find(r => r.codigo === cod) || null : null; }
+// Leva a análise do retorno para a folha, menos os elementos mudados à mão no certificado (cert.quimicaManual).
+// O que muda no certificado nunca volta para o retorno. Devolve true se a folha mudou.
+function sincronizarQuimica(c) {
+  const r = retornoDoCert(c);
+  if (!r || !temAnalise(r.analise)) return false;
+  const alvo = quimicaDe(r.analise), man = c.quimicaManual || {};
+  c.quimica = c.quimica || {};
+  let mudou = false;
+  for (const e of QALL) {
+    if (man[e]) continue;
+    const v = alvo[e] ?? '';
+    if ((c.quimica[e] ?? '') !== v) { if (v) c.quimica[e] = v; else delete c.quimica[e]; mudou = true; }
+  }
+  return mudou;
+}
+const marcarManual = (c, els) => { c.quimicaManual = c.quimicaManual || {}; els.forEach(e => { c.quimicaManual[e] = true; }); };
+
 // Análise da corrida para o certificado: a do retorno que ela gerou (PDF do laboratório); se não houver, a antiga da corrida
 function analiseDaCorrida(c) {
   if (!c) return null;
@@ -350,20 +374,40 @@ function paginaEditor(id, focar) {
     papel.querySelectorAll('td[data-el]').forEach(td => { td.classList.remove('oos', 'inv'); td.removeAttribute('title'); });
     s.fora.forEach(o => { const td = papel.querySelector(`td[data-el="${o.e}"]`); if (td) { td.classList.add('oos'); td.title = `Fora da faixa ${s.liga.nome}: ${fmtQ(o.mn)} a ${o.mx != null ? fmtQ(o.mx) : '—'}`; } });
     s.invalidos.forEach(o => { const td = papel.querySelector(`td[data-el="${o.e}"]`); if (td) { td.classList.add('inv'); td.title = 'Valor com formato inválido'; } });
+    // Diferente do retorno vinculado: vermelho na tela (não sai na impressão)
+    papel.querySelectorAll('td.dif').forEach(td => td.classList.remove('dif'));
+    const ret = retornoDoCert(cur);
+    if (ret && temAnalise(ret.analise)) for (const e of QALL) {
+      const vc = parseNum((cur.quimica || {})[e]), vr = ret.analise[e] != null && ret.analise[e] !== '' ? +ret.analise[e] : null;
+      const igual = (vc == null || Number.isNaN(vc)) ? vr == null && !String((cur.quimica || {})[e] ?? '').trim() : vr != null && Math.abs(vc - vr) < 1e-9;
+      if (igual) continue;
+      const td = papel.querySelector(`td[data-el="${e}"]`);
+      if (td) { td.classList.add('dif'); td.title = (td.title ? td.title + ' · ' : '') + `Diferente do retorno ${ret.codigo}: ${vr != null ? fmtQ(vr) : 'sem valor'}`; }
+    }
   }
 
   function pintarLado() {
     const cor = corridaDe(cur.corridaId);
-    const a = analiseDaCorrida(cor);
     const auto = (cor && acharLiga(S.ligas, cor.liga)) || acharLiga(S.ligas, cur.material);
     const s = conferir(cur);
     lado.innerHTML = `
       <div class="cartao"><h2>Corrida</h2><div class="corpo">
         ${cor ? `<p style="margin-top:0"><a href="${banco.raiz('liga/index.html')}#/corrida/${encodeURIComponent(cor.id)}"><b>${esc(numeroCorrida(cor))}</b></a> · ${esc(cor.liga || '')} · ${fmtData(cor.data)}${(cor.ops || []).length ? '<br>OP ' + esc(cor.ops.join(', ')) : ''}</p>
-            <p class="mut" style="font-size:12px">${a ? 'Análise disponível: ' + esc(a.fonte) + '.' : 'A corrida ainda não tem resultado do laboratório.'}</p>
-            ${ED ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${a ? `<button class="btn peq" id="btTrazer">${icone('baixar')} Trazer a análise da corrida</button>` : ''}<button class="btn peq" id="btLigar">Trocar corrida</button></div>` : ''}`
+            ${ED ? `<button class="btn peq" id="btLigar">Trocar corrida</button>` : ''}`
           : `<p class="mut" style="margin-top:0">Este certificado não está ligado a uma corrida do sistema.</p>${ED ? `<button class="btn peq" id="btLigar">${icone('chama')} Ligar a uma corrida</button>` : ''}`}
       </div></div>
+      <div class="cartao"><h2>Retorno vinculado</h2><div class="corpo">${(() => {
+        const cod = codigoRetornoDoCert(cur), ret = retornoDoCert(cur);
+        const man = QALL.filter(e => (cur.quimicaManual || {})[e]);
+        if (!cod) return `<p class="mut" style="margin-top:0">${cur.retorno === '-' ? 'Sem vínculo: a análise química é só a da folha.' : 'Nenhum retorno vinculado.'}</p>${ED ? `<button class="btn peq" id="btTrocarRet">${icone('reciclar')} Vincular a um retorno</button>` : ''}`;
+        return `<p style="margin-top:0"><a href="${banco.raiz('liga/index.html')}#/retornos"><b>${esc(cod)}</b></a>${ret && ret.liga ? ' · ' + esc(ret.liga) : ''}${cur.retorno ? '' : ' <span class="mut">(da corrida)</span>'}</p>
+          <p class="mut" style="font-size:12px">${!ret ? '<span class="txt-amar">Retorno não encontrado.</span>'
+            : temAnalise(ret.analise) ? `A análise química segue a do retorno${ret.relatorio ? ' (relatório ' + esc(ret.relatorio) + ')' : ''}.`
+            : 'O retorno ainda não tem análise: quando o PDF do laboratório for lido no retorno, ela vem para cá sozinha.'}
+            O que você mudar na folha fica <b>só no certificado</b>.</p>
+          ${man.length ? `<p style="font-size:12px;margin:6px 0"><span class="txt-amar">Mudados só no certificado:</span> ${man.map(esc).join(', ')}</p>` : ''}
+          ${ED ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${man.length && ret && temAnalise(ret.analise) ? `<button class="btn peq" id="btSeguir" title="Desfaz as mudanças da folha e volta a usar a análise do retorno">Voltar a seguir o retorno</button>` : ''}<button class="btn peq" id="btTrocarRet">Trocar retorno</button></div>` : ''}`;
+      })()}</div></div>
       ${ED ? `<div class="cartao"><h2>PDF do laboratório</h2><div class="corpo">
         <label class="btn peq pri" title="Lê o certificado de análise (Priner) e preenche a análise química da folha">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
         <p class="mut" id="stLaudo" style="font-size:12px;margin:6px 0 0">Preenche a análise química com o PDF que o laboratório manda.</p>
@@ -404,6 +448,7 @@ function paginaEditor(id, focar) {
       if (t === '' && el.innerHTML !== '') el.innerHTML = '';
       if (f === 'corrida' && cur.abaAuto) { cur.aba = abaFrom(t); C.querySelector('#aba').value = cur.aba; }
       setPath(cur, f, t);
+      if (f.startsWith('quimica.')) marcarManual(cur, [f.slice(8)]);   // mudado no certificado: fica só aqui
       if (f === 'dataEmissao') { cur.dataAprovacao = t; const m = papel.querySelector('[data-mirror="dataEmissao"]'); if (m) m.textContent = t; }
       mexeu();
       if (f.startsWith('quimica.') || f === 'material') { clearTimeout(papel._t); papel._t = setTimeout(() => { marcarConferencia(); pintarLado(); }, 250); }
@@ -449,7 +494,7 @@ function paginaEditor(id, focar) {
         e.preventDefault();
         if (partes.length > 1) {
           let k = QALL.indexOf(f.slice(8)), n = 0;
-          for (const v of partes) { if (k >= QALL.length) break; cur.quimica[QALL[k]] = fmtNum(v); k++; n++; }
+          for (const v of partes) { if (k >= QALL.length) break; cur.quimica[QALL[k]] = fmtNum(v); marcarManual(cur, [QALL[k]]); k++; n++; }
           mexeu(); pintarPapel('quimica.' + QALL[Math.min(k, QALL.length) - 1]); pintarLado();
           aviso(`${n} valores colados na análise química.`);
         } else document.execCommand('insertText', false, fmtNum(partes[0] || ''));
@@ -486,7 +531,8 @@ function paginaEditor(id, focar) {
     });
     lado.addEventListener('click', e => {
       if (e.target.closest('#btHoje')) { cur.dataEmissao = hojeBR(); cur.dataAprovacao = hojeBR(); mexeu(); pintarPapel(); aviso('Data de emissão = hoje (' + hojeBR() + ').'); }
-      if (e.target.closest('#btTrazer')) trazerAnalise();
+      if (e.target.closest('#btSeguir')) seguirRetorno();
+      if (e.target.closest('#btTrocarRet')) trocarRetorno();
       if (e.target.closest('#btLigar')) ligarCorrida();
       const li = e.target.closest('[data-ir]'); if (li) focarCampo('quimica.' + li.dataset.ir);
     });
@@ -520,7 +566,8 @@ function paginaEditor(id, focar) {
     const atual = String(cur.corrida || '').replace(/\s/g, '').replace(/\//g, '-');
     if (pref && atual && atual !== pref && !confirm(`O PDF é da corrida ${pref}, mas este certificado é da corrida ${cur.corrida}.\n\nUsar a análise deste PDF mesmo assim?`)) { pintarLado(); return; }
     const temValores = Object.values(cur.quimica || {}).some(v => String(v).trim());
-    if (temValores && !confirm('Substituir a análise química do certificado pela do PDF?')) { pintarLado(); return; }
+    cur.quimica = quimicaDe(r.analise);
+    marcarManual(cur, Object.keys(cur.quimica));   // veio do PDF direto no certificado: o retorno não sobrescreve
     cur.quimica = quimicaDe(r.analise);
     if (cur.mostrarQuimica === false) setQuimica(cur, true);
     if (pref && !atual) { cur.corrida = pref; if (cur.abaAuto) { cur.aba = abaFrom(cur.corrida); C.querySelector('#aba').value = cur.aba; } }
@@ -529,14 +576,50 @@ function paginaEditor(id, focar) {
     if (st2) st2.innerHTML = `<span class="txt-az">Lido: ${esc(f.name)} — ${Object.keys(cur.quimica).length} elementos${r.relatorio ? ' (certificado ' + esc(r.relatorio) + ')' : ''}.</span> Confira na folha.`;
     aviso('Análise química preenchida pelo PDF do laboratório.');
   }
-  function trazerAnalise() {
-    const a = analiseDaCorrida(corridaDe(cur.corridaId));
-    if (!a) return;
-    const temValores = Object.values(cur.quimica || {}).some(v => String(v).trim());
-    if (temValores && !confirm('Substituir a análise química do certificado pela ' + a.fonte + '?')) return;
-    cur.quimica = quimicaDe(a.valores);
+  // Desfaz as mudanças feitas na folha e volta a usar a análise do retorno
+  function seguirRetorno() {
+    const man = QALL.filter(e => (cur.quimicaManual || {})[e]);
+    if (man.length && !confirm(`Os valores mudados no certificado (${man.join(', ')}) voltam a ser os do retorno. Continuar?`)) return;
+    cur.quimicaManual = {};
+    sincronizarQuimica(cur);
     mexeu(); pintarPapel(); pintarLado();
-    aviso('Análise química trazida da corrida.');
+    aviso('A análise química voltou a seguir o retorno.');
+  }
+  function trocarRetorno() {
+    const lista = S.retornos.slice().sort((a, b) => String(b.codigo).localeCompare(String(a.codigo), 'pt', { numeric: true }));
+    const atual = codigoRetornoDoCert(cur);
+    janela({
+      titulo: 'Retorno vinculado ao certificado',
+      html: `<div class="busca">${icone('busca')}<input class="ent" id="rBusca" placeholder="código do retorno ou liga…" value="${esc(cur.corrida || '')}" autocomplete="off"></div>
+        <select class="ent" id="rSel" size="8" style="margin-top:6px"></select>
+        <p class="mut" style="font-size:12px">A análise do retorno vem para o certificado (e as próximas mudanças dela também). O que for mudado no certificado não volta para o retorno.</p>`,
+      aoAbrir: el => {
+        const pintar = () => {
+          const f = norm(el.querySelector('#rBusca').value).replace(/[\s/]+/g, '-').replace(/^-|-$/g, '');
+          const l = lista.filter(r => !f || norm(r.codigo + ' ' + (r.liga || '')).replace(/\s+/g, '-').includes(f)).slice(0, 200);
+          el.querySelector('#rSel').innerHTML = l.map(r => `<option value="${esc(r.codigo)}" ${r.codigo === atual ? 'selected' : ''}>${esc(r.codigo)}${r.liga ? ' · ' + esc(r.liga) : ''}${temAnalise(r.analise) ? '' : '  (sem análise)'}</option>`).join('') || '<option disabled>Nenhum retorno encontrado</option>';
+        };
+        el.querySelector('#rBusca').oninput = pintar; pintar();
+      },
+      botoes: [
+        ...(atual ? [{ texto: 'Tirar o vínculo', esquerda: true, acao: () => { cur.retorno = '-'; mexeu(); pintarLado(); } }] : []),
+        { texto: 'Cancelar' },
+        { texto: 'Vincular', cls: 'pri', acao: el => {
+          const cod = el.querySelector('#rSel').value;
+          if (!cod) { aviso('Escolha o retorno.', 'erro'); return false; }
+          cur.retorno = cod === (corridaDe(cur.corridaId) || {}).retornoGerado ? '' : cod;   // o da corrida fica "automático"
+          const temValores = Object.values(cur.quimica || {}).some(v => String(v).trim());
+          const ret = S.retornos.find(r => r.codigo === cod);
+          if (ret && temAnalise(ret.analise) && temValores) {
+            if (confirm('Trazer a análise do retorno ' + cod + ' para a folha (substitui a atual)?')) cur.quimicaManual = {};
+            else marcarManual(cur, QALL.filter(e => String((cur.quimica || {})[e] ?? '').trim()));   // mantém o que já está na folha
+          }
+          sincronizarQuimica(cur);
+          mexeu(); pintarPapel(); pintarLado();
+          aviso('Certificado vinculado ao retorno ' + cod + '.');
+        } },
+      ],
+    });
   }
   function ligarCorrida() {
     const corridas = S.corridas.slice().sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
@@ -559,7 +642,7 @@ function paginaEditor(id, focar) {
         { texto: 'Ligar', cls: 'pri', acao: el => {
           const c = corridaDe(el.querySelector('#lCorr').value);
           if (!c) { aviso('Escolha a corrida.', 'erro'); return false; }
-          cur.corridaId = c.id;
+          cur.corridaId = c.id; if (cur.retorno === '-') cur.retorno = '';   // passa a seguir o retorno da corrida
           if (el.querySelector('#lPreencher').checked) {
             cur.corrida = nomeCorrida(c); if (cur.abaAuto) { cur.aba = abaFrom(cur.corrida); C.querySelector('#aba').value = cur.aba; }
             cur.material = c.liga || cur.material; cur.opLiga = (c.ops || []).join(' - ') || cur.opLiga;
@@ -578,9 +661,13 @@ function paginaEditor(id, focar) {
       // mudou em outro computador: atualiza a folha, a não ser que esteja sendo editada aqui
       const editando = pendentes.has(id) || (document.activeElement && C.contains(document.activeElement) && document.activeElement.closest('#papel, #lado, #aba'));
       if (!editando && (novo.alteradoEm || 0) > (cur.alteradoEm || 0)) { cur = clone(novo); C.querySelector('#aba').value = cur.aba; pintarPapel(); }
+      // o retorno vinculado recebeu (ou mudou) a análise: leva para a folha, a não ser que esteja digitando nela
+      const naAnalise = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-f^="quimica."]');
+      if (!naAnalise && sincronizarQuimica(cur)) { if (ED) mexeu(); pintarPapel(); }
       pintarLado();
     },
   };
+  if (sincronizarQuimica(cur) && ED) mexeu();   // análise do retorno vinculado (só grava quem edita)
   pintarPapel(focar);
   pintarLado();
 }

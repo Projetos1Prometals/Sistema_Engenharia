@@ -106,6 +106,12 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - Ligação com o Cálculo de Liga: `corridaId`. Novo certificado a partir da corrida traz corrida ("ref-anual"),
   material (liga), OP da liga e a **análise do laboratório** (ou do retorno gerado). A conferência usa as
   faixas de "Ligas e normas" (`eng_ligas`) — o app antigo tinha uma lista própria, que não é importada.
+- **Vínculo com o retorno (só retorno → certificado)**: `cert.retorno` = código escolhido; vazio = segue o
+  `retornoGerado` da corrida ligada; `'-'` = sem vínculo (`codigoRetornoDoCert()`). `sincronizarQuimica()` leva a
+  análise do retorno para `quimica` ao abrir e quando o retorno muda, **menos** os elementos em `cert.quimicaManual`
+  (marcados ao digitar/colar na folha ou ao ler o PDF direto no certificado). O certificado **nunca** grava no retorno.
+  "Voltar a seguir o retorno" limpa `quimicaManual`. A janela do retorno lista os certificados vinculados.
+  Valor diferente do retorno: célula em **vermelho só na tela** (`td.dif`, em `marcarConferencia()`); na impressão sai normal.
 - Análise do certificado: 20 elementos = `ELEMENTOS` + `ELEMENTOS_LAB_EXTRA` (P, Co, Pb, Sn, B, Mg, Fe),
   que também aparecem no resultado do laboratório da corrida.
 - Importa o backup .json do app antigo (`{sistema:'certificados-prometals', certs, assinatura}`) e liga
