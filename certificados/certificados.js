@@ -9,7 +9,8 @@
 import * as banco from '../comum/banco.js';
 import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, baixarArquivo } from '../comum/casca.js';
 import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.5.1';
-import { lerLaudoOuAvisar } from '../liga/laudo.js?v=1.5.1';
+import { lerLaudoOuAvisar } from '../liga/laudo.js?v=1.5.6';
+import { criarCertificadosAuto, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=1.5.5';
 import {
   QALL, FIXED, DEF, clone, hojeBR, dateKey, abaFrom, setPath, fmtNum, parseNum, upgradeCert, setQuimica, SEC_AFTER_Q, shiftNum, certHTML,
   unidadesProdutos, produtosParte, rotuloPagina, certContinuacao,
@@ -30,7 +31,18 @@ C.innerHTML = '<div class="vazio">Carregando dados…</div>';
 
 function chegou(nome) {
   S.chegou[nome] = true;
-  if (['certs', 'corridas', 'ligas', 'retornos', 'cfg'].every(k => S.chegou[k])) { if (!pagina) rotear(); else pagina.atualizar(); }
+  if (['certs', 'corridas', 'ligas', 'retornos', 'cfg'].every(k => S.chegou[k])) { if (!pagina) rotear(); else pagina.atualizar(); verCertificadosAuto(); }
+}
+// Retornos com análise que ainda não têm certificado ganham um (só quem edita; uma rodada por vez)
+let criandoAuto = false;
+async function verCertificadosAuto() {
+  if (!ED || criandoAuto) return;
+  criandoAuto = true;
+  try {
+    const novos = await criarCertificadosAuto(S, banco);
+    if (novos.length) aviso(novos.length === 1 ? `Certificado criado para o retorno ${novos[0].criadoDoRetorno}.` : `${novos.length} certificados criados para os retornos com análise.`);
+  } catch (e) { console.warn('certificados automáticos', e); }
+  finally { criandoAuto = false; }
 }
 const erro = e => { C.innerHTML = `<div class="faixa verm">${e && /permission/i.test(e.code || e.message || '') ? 'Seu usuário não tem permissão para ver os certificados.' : 'Erro ao ler o banco: ' + esc(e && (e.message || e.code))}</div>`; };
 banco.ouvirColecao(COL.certs, l => { S.certs = l.map(upgradeCert); chegou('certs'); }, erro);
@@ -70,11 +82,8 @@ const nomeCorrida = c => `${c.refratario ?? '?'}-${c.anual ?? '?'}`;     // form
 const descCorrida = c => `${numeroCorrida(c)} · ${c.liga || '?'} · ${fmtData(c.data)}${(c.ops || []).length ? ' · OP ' + c.ops.join(', ') : ''}${c.fs ? ' · ' + c.fs : ''}`;
 
 // ---- Vínculo certificado → retorno (só nesse sentido) ----
-// Retorno vinculado: o escolhido (cert.retorno) ou, sem escolha, o gerado pela corrida ligada. '-' = sem vínculo.
-function codigoRetornoDoCert(c) {
-  if (c.retorno === '-') return '';
-  return c.retorno || (corridaDe(c.corridaId) || {}).retornoGerado || '';
-}
+// Retorno vinculado: o escolhido; senão o da corrida ligada; senão o de mesmo nº de corrida (auto.js). '-' = sem vínculo.
+const codigoRetornoDoCert = c => codigoRetornoDoCertAuto(c, S);
 function retornoDoCert(c) { const cod = codigoRetornoDoCert(c); return cod ? S.retornos.find(r => r.codigo === cod) || null : null; }
 // Leva a análise do retorno para a folha, menos os elementos mudados à mão no certificado (cert.quimicaManual).
 // O que muda no certificado nunca volta para o retorno. Devolve true se a folha mudou.
@@ -400,7 +409,7 @@ function paginaEditor(id, focar) {
         const cod = codigoRetornoDoCert(cur), ret = retornoDoCert(cur);
         const man = QALL.filter(e => (cur.quimicaManual || {})[e]);
         if (!cod) return `<p class="mut" style="margin-top:0">${cur.retorno === '-' ? 'Sem vínculo: a análise química é só a da folha.' : 'Nenhum retorno vinculado.'}</p>${ED ? `<button class="btn peq" id="btTrocarRet">${icone('reciclar')} Vincular a um retorno</button>` : ''}`;
-        return `<p style="margin-top:0"><a href="${banco.raiz('liga/index.html')}#/retornos"><b>${esc(cod)}</b></a>${ret && ret.liga ? ' · ' + esc(ret.liga) : ''}${cur.retorno ? '' : ' <span class="mut">(da corrida)</span>'}</p>
+        return `<p style="margin-top:0"><a href="${banco.raiz('liga/index.html')}#/retornos"><b>${esc(cod)}</b></a>${ret && ret.liga ? ' · ' + esc(ret.liga) : ''}${cur.retorno ? '' : ' <span class="mut">(automático, pelo nº da corrida)</span>'}</p>
           <p class="mut" style="font-size:12px">${!ret ? '<span class="txt-amar">Retorno não encontrado.</span>'
             : temAnalise(ret.analise) ? `A análise química segue a do retorno${ret.relatorio ? ' (relatório ' + esc(ret.relatorio) + ')' : ''}.`
             : 'O retorno ainda não tem análise: quando o PDF do laboratório for lido no retorno, ela vem para cá sozinha.'}

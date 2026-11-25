@@ -40,6 +40,7 @@ async function itensDaPagina(pg) {
   const tc = await pg.getTextContent();
   return tc.items.filter(i => i.str && i.str.trim()).map(i => ({
     t: i.str.trim(), x: i.transform[4] + (i.width || 0) / 2, y: i.transform[5], h: Math.abs(i.transform[3]) || 8,
+    x0: i.transform[4], x1: i.transform[4] + (i.width || 0),
   }));
 }
 
@@ -76,13 +77,28 @@ function analiseDaPagina(itens) {
   return analise;
 }
 
+// Nº do certificado pela posição: o texto com número logo abaixo de "CERTIFICADO N.º: / Certificate Nr."
+// (canto superior direito), seja qual for o formato do número.
+function numeroPelaPosicao(itens) {
+  const rot = itens.filter(i => /Certificate\s*Nr|CERTIFICADO\s*N\s*[.°º]/i.test(i.t)).sort((a, b) => a.y - b.y)[0];
+  if (!rot) return '';
+  const cands = itens.filter(i => i !== rot && i.y < rot.y && rot.y - i.y <= 50 && /\d/.test(i.t)
+    && !/Certificate|CERTIFICADO/i.test(i.t) && i.x1 > rot.x0 - 80 && i.x0 < rot.x1 + 20)
+    .sort((a, b) => b.y - a.y);
+  if (!cands.length) return '';
+  // pode vir partido em mais de um pedaço na mesma linha
+  const y = cands[0].y;
+  return cands.filter(i => Math.abs(i.y - y) <= 2).sort((a, b) => a.x0 - b.x0).map(i => i.t).join('').replace(/^[:\s]+/, '').trim();
+}
+
 // Lê o arquivo (File/Blob) e devolve { analise: {C: 0.51, …}, relatorio, emissao (AAAA-MM-DD), corrida: {refratario, anual}, laboratorio }
 export async function lerLaudo(arquivo) {
   const lib = await carregarPdfJs();
   const pdf = await lib.getDocument({ data: new Uint8Array(await arquivo.arrayBuffer()) }).promise;
-  let analise = {}, texto = '';
+  let analise = {}, texto = '', numero = '';
   for (let p = 1; p <= pdf.numPages; p++) {
     const itens = await itensDaPagina(await pdf.getPage(p));
+    if (!numero) numero = numeroPelaPosicao(itens);
     texto += '\n' + linhas(itens).map(l => l.itens.map(i => i.t).join(' ')).join('\n');
     analise = { ...analiseDaPagina(itens), ...analise };
   }
@@ -91,7 +107,8 @@ export async function lerLaudo(arquivo) {
   const corr = /CORRIDA\s*(\d+)\s*[-–—/]\s*(\d+)/i.exec(texto);
   return {
     analise,
-    relatorio: m(/\b(\d{3,}\.\d{3,}-\d+\/[A-Z]{2,}(?:-[A-Z]{2,})*)/),
+    relatorio: numero || m(/\b(\d{3,}\.\d{3,}-\d+\/[A-Z]{2,}(?:-[A-Z]{2,})*)/)
+      || m(/(?:Certificate\s*Nr\.?|CERTIFICADO\s*N\.?\s*[°º]?\s*:?)[\s\S]{0,80}?\b(\d[\w.\-/]{4,})/i),
     emissao: dataISO(m(/Emiss[aã]o[^\n]{0,60}?(\d{2}\/\d{2}\/\d{4})/i)),
     corrida: corr ? { refratario: +corr[1], anual: +corr[2] } : null,
     laboratorio: /priner/i.test(texto) ? 'Priner' : '',

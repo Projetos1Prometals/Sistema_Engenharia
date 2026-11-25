@@ -9,7 +9,8 @@ import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,
 } from './calculo.js?v=1.5.1';
-import { lerLaudoOuAvisar } from './laudo.js?v=1.5.1';
+import { lerLaudoOuAvisar } from './laudo.js?v=1.5.6';
+import { criarCertificadosAuto, codigoRetornoDoCert, COL_CERTS } from '../certificados/auto.js?v=1.5.5';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
 import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.5';
@@ -1003,13 +1004,17 @@ function editarRetorno(r) {
         if (!novo && id !== r.id) banco.apagar(COL.retornos, r.id);
         banco.salvar(COL.retornos, id, dados);
         aviso('Retorno ' + codigo + ' salvo.');
+        // retorno com análise ganha o seu certificado (certificados/auto.js)
+        if (temAnalise(analise) && podeEditar('certificados')) banco.lerColecao(COL_CERTS)
+          .then(certs => criarCertificadosAuto({ retornos: [{ ...dados, id }], certs, corridas: S.corridas, ligas: S.ligas }, banco))
+          .then(novos => { if (novos.length) aviso('Retorno ' + codigo + ' salvo e certificado criado (Certificados → ' + novos[0].aba + ').'); })
+          .catch(e => console.warn('certificado automático', e));
       } },
     ],
     aoAbrir: el => {
       // Certificados que seguem a análise deste retorno (o escolhido no certificado ou o da corrida ligada)
-      if (!novo) banco.lerColecao('eng_certificados').then(certs => {
-        const porCorrida = new Map(S.corridas.map(c => [c.id, c.retornoGerado]));
-        const ligados = certs.filter(c => c.retorno !== '-' && (c.retorno || porCorrida.get(c.corridaId)) === r.codigo);
+      if (!novo) banco.lerColecao(COL_CERTS).then(certs => {
+        const ligados = certs.filter(c => codigoRetornoDoCert(c, { corridas: S.corridas, retornos: S.retornos }) === r.codigo);
         const box = el.querySelector('#certsDoRet');
         if (box && ligados.length) box.innerHTML = `<span class="mut" style="font-size:12.5px">A análise também vai para:</span> ` + ligados.map(c => `<a class="pilula lar" href="${banco.raiz('certificados/index.html')}#/c/${encodeURIComponent(c.id)}">${icone('certificado')} ${esc(c.aba || c.corrida || 'certificado')}</a>`).join(' ');
       }).catch(e => console.warn('certificados', e));
@@ -1030,8 +1035,8 @@ function editarRetorno(r) {
           cod.value = l ? codigoRetornoDaCorrida(r2.corrida, l.nome) : pref + '-';
         }
         el.querySelectorAll('[data-el]').forEach(i => { const v = r2.analise[i.dataset.el]; if (v != null) i.value = String(v).replace('.', ','); });
-        if (r2.relatorio) el.querySelector('#rRel').value = r2.relatorio;
-        st.innerHTML = `<span class="txt-az">Lido: ${esc(f.name)}${r2.relatorio ? ' — certificado ' + esc(r2.relatorio) : ''}.</span> Confira e clique em <b>Salvar</b>.`;
+        el.querySelector('#rRel').value = r2.relatorio || '';   // nunca fica o nº de outro laudo
+        st.innerHTML = `<span class="txt-az">Lido: ${esc(f.name)}${r2.relatorio ? ' — relatório ' + esc(r2.relatorio) : ''}.</span>${r2.relatorio ? '' : ' <span class="txt-amar">Não achei o nº do relatório no PDF: digite no campo.</span>'} Confira e clique em <b>Salvar</b>.`;
       };
     },
   });

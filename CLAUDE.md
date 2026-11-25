@@ -36,7 +36,8 @@ Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
   vazio vira `ref-anual-SIGLA` da liga escolhida) e no **certificado** (lado direito: preenche `quimica`; corrida vazia
   vira "34-227"). **Não** fica na ficha da corrida (pedido do usuário).
 - `lerLaudo()` lê o certificado de análise da Priner (FOR-LAB-0035) com pdf.js (cdnjs, carregado só quando precisa):
-  tabela "Composição / Resultado" (valor → símbolo de x mais próximo), nº do certificado, emissão, "CORRIDA 34 - 227".
+  tabela "Composição / Resultado" (valor → símbolo de x mais próximo), nº do certificado (pela posição: logo abaixo de
+  "Certificate Nr.", qualquer formato; no retorno, PDF sem nº **limpa** o campo), emissão, "CORRIDA 34 - 227".
 - Confere a corrida do PDF com o código do retorno / a corrida do certificado (pergunta se não bater). Não salva
   sozinho nem guarda o PDF.
 - PDF escaneado (sem texto) não funciona: avisa para digitar à mão.
@@ -107,11 +108,16 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   material (liga), OP da liga e a **análise do laboratório** (ou do retorno gerado). A conferência usa as
   faixas de "Ligas e normas" (`eng_ligas`) — o app antigo tinha uma lista própria, que não é importada.
 - **Vínculo com o retorno (só retorno → certificado)**: `cert.retorno` = código escolhido; vazio = segue o
-  `retornoGerado` da corrida ligada; `'-'` = sem vínculo (`codigoRetornoDoCert()`). `sincronizarQuimica()` leva a
+  `retornoGerado` da corrida ligada; senão o retorno com o mesmo nº de corrida ("48-242" → `48-242` ou `48-242-CF8`);
+  `'-'` = sem vínculo (`codigoRetornoDoCert()` em `certificados/auto.js`). `sincronizarQuimica()` leva a
   análise do retorno para `quimica` ao abrir e quando o retorno muda, **menos** os elementos em `cert.quimicaManual`
   (marcados ao digitar/colar na folha ou ao ler o PDF direto no certificado). O certificado **nunca** grava no retorno.
   "Voltar a seguir o retorno" limpa `quimicaManual`. A janela do retorno lista os certificados vinculados.
   Valor diferente do retorno: célula em **vermelho só na tela** (`td.dif`, em `marcarConferencia()`); na impressão sai normal.
+- **Certificado automático** (`criarCertificadosAuto()` em `certificados/auto.js`, pedido do usuário): todo retorno com
+  análise, que não seja da planilha e que nenhum certificado siga, ganha um certificado (corrida, material, OP da liga se
+  houver corrida, análise; cliente/produtos em branco). Roda ao salvar o retorno (Cálculo de Liga) e ao abrir Certificados.
+  O retorno guarda `certificadoAuto` = id do certificado: excluído o certificado, **não** é criado de novo.
 - Análise do certificado: 20 elementos = `ELEMENTOS` + `ELEMENTOS_LAB_EXTRA` (P, Co, Pb, Sn, B, Mg, Fe),
   que também aparecem no resultado do laboratório da corrida.
 - Importa o backup .json do app antigo (`{sistema:'certificados-prometals', certs, assinatura}`) e liga
