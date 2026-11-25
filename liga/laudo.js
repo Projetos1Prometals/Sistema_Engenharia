@@ -97,3 +97,14 @@ export async function lerLaudo(arquivo) {
     laboratorio: /priner/i.test(texto) ? 'Priner' : '',
   };
 }
+
+// Para as telas: lê o PDF e avisa o problema (aviso = função da casca). Devolve o resultado ou null.
+export async function lerLaudoOuAvisar(arquivo, aviso) {
+  if (!arquivo) return null;
+  if (!/pdf$/i.test(arquivo.type) && !/\.pdf$/i.test(arquivo.name)) { aviso('Escolha o arquivo PDF do laboratório.', 'erro'); return null; }
+  let r;
+  try { r = await lerLaudo(arquivo); }
+  catch (e) { console.error(e); aviso('Não consegui ler o PDF: ' + e.message, 'erro'); return null; }
+  if (!Object.keys(r.analise).length) { aviso('Não achei a tabela de resultados neste PDF. Digite a análise à mão.', 'erro'); return null; }
+  return r;
+}

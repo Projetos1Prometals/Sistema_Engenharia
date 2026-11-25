@@ -8,7 +8,8 @@
 // =====================================================================
 import * as banco from '../comum/banco.js';
 import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, baixarArquivo } from '../comum/casca.js';
-import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.4.0';
+import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.5.1';
+import { lerLaudoOuAvisar } from '../liga/laudo.js?v=1.5.1';
 import {
   QALL, FIXED, DEF, clone, hojeBR, dateKey, abaFrom, setPath, fmtNum, parseNum, upgradeCert, setQuimica, SEC_AFTER_Q, shiftNum, certHTML,
   unidadesProdutos, produtosParte, rotuloPagina, certContinuacao,
@@ -68,12 +69,12 @@ const corridaDe = id => S.corridas.find(c => c.id === id);
 const nomeCorrida = c => `${c.refratario ?? '?'}-${c.anual ?? '?'}`;     // formato do certificado: "33-229"
 const descCorrida = c => `${numeroCorrida(c)} · ${c.liga || '?'} · ${fmtData(c.data)}${(c.ops || []).length ? ' · OP ' + c.ops.join(', ') : ''}${c.fs ? ' · ' + c.fs : ''}`;
 
-// Análise da corrida para o certificado: o resultado do laboratório; se não houver, a do retorno que ela gerou
+// Análise da corrida para o certificado: a do retorno que ela gerou (PDF do laboratório); se não houver, a antiga da corrida
 function analiseDaCorrida(c) {
   if (!c) return null;
-  if (temAnalise(c.real)) return { valores: c.real, fonte: 'resultado do laboratório da corrida' };
   const r = c.retornoGerado && S.retornos.find(x => x.codigo === c.retornoGerado);
   if (r && temAnalise(r.analise)) return { valores: r.analise, fonte: 'análise do retorno ' + r.codigo };
+  if (temAnalise(c.real)) return { valores: c.real, fonte: 'resultado do laboratório da corrida' };
   return null;
 }
 function quimicaDe(valores) {
@@ -363,6 +364,10 @@ function paginaEditor(id, focar) {
             ${ED ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${a ? `<button class="btn peq" id="btTrazer">${icone('baixar')} Trazer a análise da corrida</button>` : ''}<button class="btn peq" id="btLigar">Trocar corrida</button></div>` : ''}`
           : `<p class="mut" style="margin-top:0">Este certificado não está ligado a uma corrida do sistema.</p>${ED ? `<button class="btn peq" id="btLigar">${icone('chama')} Ligar a uma corrida</button>` : ''}`}
       </div></div>
+      ${ED ? `<div class="cartao"><h2>PDF do laboratório</h2><div class="corpo">
+        <label class="btn peq pri" title="Lê o certificado de análise (Priner) e preenche a análise química da folha">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
+        <p class="mut" id="stLaudo" style="font-size:12px;margin:6px 0 0">Preenche a análise química com o PDF que o laboratório manda.</p>
+      </div></div>` : ''}
       <div class="cartao"><h2>Conferência <span class="pilula">não imprime</span></h2><div class="corpo">
         <label class="campo">Norma de referência<select class="ent" id="ligaSel" ${ED ? '' : 'disabled'}>
           <option value="">Automático ${auto ? '(' + esc(auto.nome) + ')' : '(nenhuma)'}</option><option value="-">Não conferir</option>
@@ -473,6 +478,7 @@ function paginaEditor(id, focar) {
       if (e.target.id === 'ligaSel') { cur.ligaRef = e.target.value; mexeu(); marcarConferencia(); pintarLado(); }
       if (e.target.id === 'chkSig') { cur.mostrarAssinatura = e.target.checked; mexeu(); pintarPapel(); }
       if (e.target.id === 'chkQuim') { setQuimica(cur, e.target.checked); mexeu(); pintarPapel(); pintarLado(); }
+      if (e.target.id === 'arqLaudo') { const f = e.target.files[0]; e.target.value = ''; lerPdfLaboratorio(f); }
     });
     lado.addEventListener('input', e => {
       if (e.target.id === 'opsBusca') { cur.opsBusca = e.target.value; mexeu(); }
@@ -504,6 +510,25 @@ function paginaEditor(id, focar) {
   }
   C.querySelector('#btImpr').onclick = () => imprimir([cur]);
 
+  // PDF do certificado de análise do laboratório → análise química da folha
+  async function lerPdfLaboratorio(f) {
+    if (!f) return;
+    const st = C.querySelector('#stLaudo'); if (st) st.textContent = 'Lendo o PDF…';
+    const r = await lerLaudoOuAvisar(f, aviso);
+    if (!r) { pintarLado(); return; }
+    const pref = r.corrida ? `${r.corrida.refratario}-${r.corrida.anual}` : '';
+    const atual = String(cur.corrida || '').replace(/\s/g, '').replace(/\//g, '-');
+    if (pref && atual && atual !== pref && !confirm(`O PDF é da corrida ${pref}, mas este certificado é da corrida ${cur.corrida}.\n\nUsar a análise deste PDF mesmo assim?`)) { pintarLado(); return; }
+    const temValores = Object.values(cur.quimica || {}).some(v => String(v).trim());
+    if (temValores && !confirm('Substituir a análise química do certificado pela do PDF?')) { pintarLado(); return; }
+    cur.quimica = quimicaDe(r.analise);
+    if (cur.mostrarQuimica === false) setQuimica(cur, true);
+    if (pref && !atual) { cur.corrida = pref; if (cur.abaAuto) { cur.aba = abaFrom(cur.corrida); C.querySelector('#aba').value = cur.aba; } }
+    mexeu(); pintarPapel(); pintarLado();
+    const st2 = C.querySelector('#stLaudo');
+    if (st2) st2.innerHTML = `<span class="txt-az">Lido: ${esc(f.name)} — ${Object.keys(cur.quimica).length} elementos${r.relatorio ? ' (certificado ' + esc(r.relatorio) + ')' : ''}.</span> Confira na folha.`;
+    aviso('Análise química preenchida pelo PDF do laboratório.');
+  }
   function trazerAnalise() {
     const a = analiseDaCorrida(corridaDe(cur.corridaId));
     if (!a) return;

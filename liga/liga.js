@@ -8,8 +8,8 @@ import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg,
 import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,
-} from './calculo.js?v=1.5.0';
-import { lerLaudo } from './laudo.js?v=1.5.0';
+} from './calculo.js?v=1.5.1';
+import { lerLaudoOuAvisar } from './laudo.js?v=1.5.1';
 import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados-iniciais.js';
 import { lerPlanilha, lerControle, aplicarControle } from './importar.js?v=1.2.0';
 import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta, corPadrao } from './amostras.js?v=1.4.5';
@@ -310,7 +310,7 @@ function paginaCorrida(id) {
       </div>
       <div class="cartao"><h2>Correção — elementos de liga (kg)</h2><div class="corpo"><div class="grade-kg" id="boxLigas"></div></div></div>
       <div class="cartao"><h2>Entrada manual<span class="cresce"></span><span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">material fora do cadastro (forma perdida, retorno sem análise…)</span><button class="btn peq" id="btAddMan">${icone('mais')} Entrada</button></h2><div class="corpo" id="boxManuais"></div></div>
-      <div class="cartao"><h2>Laboratório — resultado real da corrida<span class="cresce"></span><span id="retGeradoInfo"></span></h2><div class="corpo" id="boxLab"></div></div>
+      <div class="cartao"><h2>Retorno e certificado<span class="cresce"></span><span id="retGeradoInfo"></span></h2><div class="corpo" id="boxLab"></div></div>
       <div class="cartao"><h2>Observações</h2><div class="corpo"><textarea class="ent" data-f="obs" placeholder="Anotações da corrida">${esc(d.obs || '')}</textarea></div></div>
     </div>
     <div id="boletim"></div>`;
@@ -356,10 +356,6 @@ function paginaCorrida(id) {
       const m = d.manuais[+t.dataset.man];
       if (t.dataset.k === 'desc' || t.dataset.k === 'kg') m[t.dataset.k] = t.value;
       else { m.analise = m.analise || {}; m.analise[t.dataset.k] = t.value; }
-    } else if (t.dataset.real) {
-      d.real[t.dataset.real] = t.value;
-    } else if (t.dataset.lab) {
-      d.lab[t.dataset.lab] = t.value;
     } else mexeu = false;
     if (mexeu) { marcarSujo(); atualizarContas(); }
   }
@@ -369,7 +365,6 @@ function paginaCorrida(id) {
     if (b.dataset.delRet != null) { d.retornos.splice(+b.dataset.delRet, 1); if (!d.retornos.length) d.retornos.push(linhaRetVazia()); montarRetornos(); marcarSujo(); atualizarContas(); }
     if (b.dataset.delMan != null) { d.manuais.splice(+b.dataset.delMan, 1); montarManuais(); marcarSujo(); atualizarContas(); }
     if (b.id === 'btGerarRet') gerarRetorno();
-    if (b.id === 'btCopiarEst') { for (const e2 of ELEMENTOS) { const v = calcAtual().estimado[e2]; if (v) d.real[e2] = fmt(v, 2); } montarLab(); marcarSujo(); atualizarContas(); }
   });
   C.querySelector('#btAddRet').onclick = () => { d.retornos.push(linhaRetVazia()); montarRetornos(); };
   C.querySelector('#btAddMan').onclick = () => { d.manuais.push({ desc: '', kg: '', analise: {} }); montarManuais(); };
@@ -448,59 +443,16 @@ function paginaCorrida(id) {
   }
 
   function montarLab() {
+    // A análise do laboratório não é lançada na corrida: chega depois, pelo PDF, no retorno que a corrida gerou.
     const box = C.querySelector('#boxLab');
-    const lab = d.lab || {};
     box.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-        <label class="btn peq pri" title="Lê o PDF do certificado de análise (Priner) e preenche a análise, o nº do certificado e a data">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
-        <span class="mut" id="stLaudo">Preenche sozinho com o certificado de análise que o laboratório manda.</span>
-      </div>
-      <div class="linha-campos" style="margin-bottom:12px">
-        <label class="campo">Laboratório / empresa${ent('data-lab="empresa"', lab.empresa)}</label>
-        <label class="campo">O.S.${ent('data-lab="os"', lab.os)}</label>
-        <label class="campo">Nº relatório de ensaio${ent('data-lab="relatorio"', lab.relatorio)}</label>
-        <label class="campo">Data da coleta<input class="ent" type="date" data-lab="dataColeta" value="${esc(lab.dataColeta || '')}"></label>
-        <label class="campo">Data do resultado<input class="ent" type="date" data-lab="data" value="${esc(lab.data || '')}"></label>
-      </div>
-      <div class="tab-wrap"><table class="tab tab-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
-        <tr><td><b>Real (%)</b></td>${ELEMENTOS.map(e => `<td>${entNum(`data-real="${e}" id="real_${e}"`, d.real[e])}</td>`).join('')}</tr>
-      </tbody></table></div>
-      <div class="tab-wrap" style="margin-top:8px"><table class="tab tab-comp" style="width:auto"><thead><tr><th><span class="mut" style="font-weight:500">Só no certificado</span></th>${ELEMENTOS_LAB_EXTRA.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
-        <tr><td><b>Real (%)</b></td>${ELEMENTOS_LAB_EXTRA.map(e => `<td>${entNum(`data-real="${e}" id="real_${e}"`, d.real[e])}</td>`).join('')}</tr>
-      </tbody></table></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <p class="mut" style="margin:0 0 10px">A análise do laboratório vai no retorno desta corrida: <a href="#/retornos">Retornos</a> → abra o retorno → <b>Ler PDF do laboratório</b>.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn peq" id="btGerarRet">${icone('reciclar')} ${d.retornoGerado ? 'Atualizar retorno ' + esc(d.retornoGerado) : 'Gerar retorno desta corrida'}</button>
-        <button class="btn peq" id="btCopiarEst" title="Preenche o real com o estimado, para depois só corrigir">Copiar estimado para o real</button>
         ${ed.id ? `<a class="btn peq" href="${banco.raiz('certificados/index.html')}#/novo?corrida=${encodeURIComponent(ed.id)}" title="Cria o certificado de qualidade já com a análise desta corrida">${icone('certificado')} Novo certificado</a>` : ''}
         <span id="certsDaCorrida"></span>
       </div>`;
-    box.querySelector('#arqLaudo').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) lerPdfLaboratorio(f); };
     if (ed.id) mostrarCertificados();
-  }
-  // PDF do certificado de análise → resultado real, nº do relatório e data (o usuário confere e salva)
-  async function lerPdfLaboratorio(arquivo) {
-    const st = C.querySelector('#stLaudo');
-    if (!/pdf$/i.test(arquivo.type) && !/\.pdf$/i.test(arquivo.name)) return aviso('Escolha o arquivo PDF do laboratório.', 'erro');
-    if (st) st.textContent = 'Lendo o PDF…';
-    let r;
-    try { r = await lerLaudo(arquivo); }
-    catch (e) { console.error(e); if (st) st.textContent = ''; return aviso('Não consegui ler o PDF: ' + e.message, 'erro'); }
-    const lidos = Object.keys(r.analise);
-    if (!lidos.length) { if (st) st.textContent = ''; return aviso('Não achei a tabela de resultados neste PDF. Digite a análise à mão.', 'erro'); }
-    // Confere se o PDF é desta corrida ("CORRIDA 34 - 227" = refratário 34, anual 227)
-    const n = normalizar(d);
-    if (r.corrida && (r.corrida.refratario !== n.refratario || r.corrida.anual !== n.anual)
-      && !confirm(`O PDF é da corrida ${r.corrida.refratario}-${r.corrida.anual}, mas esta ficha é a corrida ${numeroCorrida(n)}.\n\nUsar a análise deste PDF mesmo assim?`)) { if (st) st.textContent = ''; return; }
-    const comVirgula = v => String(v).replace('.', ',');
-    for (const e of lidos) if ([...ELEMENTOS, ...ELEMENTOS_LAB_EXTRA].includes(e)) d.real[e] = comVirgula(r.analise[e]);
-    if (r.laboratorio && !d.lab.empresa) d.lab.empresa = r.laboratorio;
-    if (r.relatorio) d.lab.relatorio = r.relatorio;
-    if (r.emissao) d.lab.data = r.emissao;
-    montarLab(); marcarSujo(); atualizarContas();
-    const fora = lidos.filter(e => ![...ELEMENTOS, ...ELEMENTOS_LAB_EXTRA].includes(e));
-    const st2 = C.querySelector('#stLaudo');
-    if (st2) st2.innerHTML = `<span class="txt-az">Lido: ${esc(arquivo.name)} — ${lidos.length - fora.length} elementos${r.relatorio ? ', certificado ' + esc(r.relatorio) : ''}.</span> Confira e clique em <b>Salvar corrida</b>.`;
-    aviso('Análise do laboratório preenchida pelo PDF. Confira e salve a corrida.');
   }
   // Certificados já emitidos para esta corrida (lidos uma vez, só para mostrar o atalho)
   async function mostrarCertificados() {
@@ -519,14 +471,14 @@ function paginaCorrida(id) {
     const liga = ligaDe(d.liga);
     const faixas = (liga && liga.faixas) || {};
     const gerado = d.retornoGerado ? S.retPorCod.get(d.retornoGerado) : null;
-    const real = temAnalise(n.real) ? n.real : (gerado && temAnalise(gerado.analise) ? gerado.analise : null);
+    const real = gerado && temAnalise(gerado.analise) ? gerado.analise : (temAnalise(n.real) ? n.real : null);   // análise do laboratório = a do retorno gerado
     const est = ed.importada && orig.estimadoPlanilha ? orig.estimadoPlanilha : calc.estimado;
     const celula = (v, e) => { const s = situacaoElemento(v, faixas[e]); return `<td class="cen num ${s ? 'st-' + s : ''}">${v ? fmtComp(v) : (s ? '0,00' : '')}</td>`; };
     C.querySelector('#tabComp').innerHTML = `<table class="tab tab-comp"><thead><tr><th></th>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead><tbody>
       <tr><td class="mut">Mínimo</td>${ELEMENTOS.map(e => `<td class="cen num mut">${faixas[e] ? fmtComp(faixas[e][0]) : ''}</td>`).join('')}</tr>
       <tr><td class="mut">Máximo</td>${ELEMENTOS.map(e => `<td class="cen num mut">${faixas[e] ? fmtComp(faixas[e][1]) : ''}</td>`).join('')}</tr>
       <tr><td><b>Estimado</b>${ed.importada ? '<br><small class="mut">da planilha</small>' : ''}</td>${ELEMENTOS.map(e => celula(est[e], e)).join('')}</tr>
-      ${real ? `<tr><td><b>Real (lab)</b>${!temAnalise(n.real) && gerado ? '<br><small class="mut">do retorno</small>' : ''}</td>${ELEMENTOS.map(e => celula(real[e], e)).join('')}</tr>` : ''}
+      ${real ? `<tr><td><b>Real (lab)</b>${real === (gerado && gerado.analise) ? '<br><small class="mut">do retorno</small>' : ''}</td>${ELEMENTOS.map(e => celula(real[e], e)).join('')}</tr>` : ''}
     </tbody></table>`;
 
     const carga = ed.importada ? (+orig.carga || calc.carga) : calc.carga;
@@ -722,7 +674,8 @@ function htmlBoletim(n, calc, liga, est, carga) {
 
   const celComp = v => `<td>${v}</td>`;
   const cabComp = cls => `<tr class="${cls}">${ELEMENTOS.map(e => `<th>${e}</th>`).join('')}</tr>`;
-  const real = temAnalise(n.real) ? n.real : null;
+  const gerado = n.retornoGerado ? S.retPorCod.get(n.retornoGerado) : null;
+  const real = gerado && temAnalise(gerado.analise) ? gerado.analise : (temAnalise(n.real) ? n.real : null);
 
   return `<div class="bol">
     <table class="bol-tab bol-topo"><colgroup><col style="width:18%"><col></colgroup><tr>
@@ -796,8 +749,9 @@ function retornoAutomatico(n, liga, corridaId, opc) {
   const a = atual || {};
   banco.salvar(COL.retornos, banco.idSeguro(codigo), {
     ...semMeta(a), codigo, liga: nomeLiga,
-    analise: temAnalise(n.real) ? n.real : (a.analise || {}),
-    relatorio: (n.lab && n.lab.relatorio) || a.relatorio || '',
+    // a análise do retorno (lida do PDF) vale mais que a antiga da corrida (corridas importadas)
+    analise: temAnalise(a.analise) ? a.analise : (temAnalise(n.real) ? n.real : {}),
+    relatorio: a.relatorio || (n.lab && n.lab.relatorio) || '',
     kgVerificado: opc.kg != null ? opc.kg : (+a.kgVerificado || 0), baixaPlanilha: +a.baixaPlanilha || 0,
     origem: a.origem || 'sistema', auto: atual ? !!a.auto : !opc.manterCodigo,
     corridaId, corridaRef: { refratario: n.refratario, anual: n.anual },
@@ -1015,9 +969,15 @@ function editarRetorno(r) {
         <label class="campo">Kg verificado${entNum('id="rKg"', r.kgVerificado || '')}</label>
       </div>
       ${+r.baixaPlanilha ? `<p class="mut">Baixa que já vinha da planilha (coluna "Utilizado"): <b>${fmtKg(r.baixaPlanilha)} kg</b>.</p>` : ''}
-      <h4 style="margin:16px 0 6px">Análise do laboratório (%)</h4>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0 6px">
+        <h4 style="margin:0">Análise do laboratório (%)</h4>
+        <label class="btn peq pri" title="Lê o PDF do certificado de análise (Priner) e preenche a análise e o nº do relatório">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
+        <span class="mut" id="stLaudo" style="font-size:12.5px"></span>
+      </div>
       <div class="tab-wrap"><table class="tab tab-comp"><thead><tr>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead>
         <tbody><tr>${ELEMENTOS.map(e => `<td>${entNum(`data-el="${e}"`, (r.analise || {})[e])}</td>`).join('')}</tr></tbody></table></div>
+      <div class="tab-wrap" style="margin-top:6px"><table class="tab tab-comp" style="width:auto"><thead><tr><th><span class="mut" style="font-weight:500">Só no certificado</span></th>${ELEMENTOS_LAB_EXTRA.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead>
+        <tbody><tr><td></td>${ELEMENTOS_LAB_EXTRA.map(e => `<td>${entNum(`data-el="${e}"`, (r.analise || {})[e])}</td>`).join('')}</tr></tbody></table></div>
       <label class="campo" style="margin-top:12px">Observações<textarea class="ent" id="rObs">${esc(r.obs || '')}</textarea></label>
       ${!novo ? `<h4 style="margin:16px 0 6px">Uso nas corridas</h4>${s.usos.length ? `<table class="tab"><thead><tr><th>Corrida</th><th>Data</th><th class="dir">Solicitado (kg)</th><th class="dir">Recarga (kg)</th></tr></thead><tbody>
         ${s.usos.map(u => `<tr><td><a href="#/corrida/${encodeURIComponent(u.corridaId)}">${esc(u.numero)}</a></td><td>${fmtData(u.data)}</td><td class="dir num">${fmtKg(u.kg)}</td><td class="dir num">${u.recarga ? fmtKg(u.recarga) : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="mut">Ainda não usado em corridas do sistema.</p>'}
@@ -1044,6 +1004,28 @@ function editarRetorno(r) {
         aviso('Retorno ' + codigo + ' salvo.');
       } },
     ],
+    aoAbrir: el => {
+      el.querySelector('#arqLaudo').onchange = async e => {
+        const f = e.target.files[0]; e.target.value = '';
+        if (!f) return;
+        const st = el.querySelector('#stLaudo');
+        st.textContent = 'Lendo o PDF…';
+        const r2 = await lerLaudoOuAvisar(f, aviso);
+        if (!r2) { st.textContent = ''; return; }
+        // "CORRIDA 34 - 227" × código do retorno "34-227-…"
+        const cod = el.querySelector('#rCod');
+        const pref = r2.corrida ? `${r2.corrida.refratario}-${r2.corrida.anual}` : '';
+        if (pref && cod.value.trim() && !cod.value.trim().startsWith(pref + '-') && cod.value.trim() !== pref
+          && !confirm(`O PDF é da corrida ${pref}, mas este retorno é o ${cod.value.trim()}.\n\nUsar a análise deste PDF mesmo assim?`)) { st.textContent = ''; return; }
+        if (pref && !cod.value.trim() && !cod.readOnly) {
+          const l = ligaDe(el.querySelector('#rLiga').value);
+          cod.value = l ? codigoRetornoDaCorrida(r2.corrida, l.nome) : pref + '-';
+        }
+        el.querySelectorAll('[data-el]').forEach(i => { const v = r2.analise[i.dataset.el]; if (v != null) i.value = String(v).replace('.', ','); });
+        if (r2.relatorio) el.querySelector('#rRel').value = r2.relatorio;
+        st.innerHTML = `<span class="txt-az">Lido: ${esc(f.name)}${r2.relatorio ? ' — certificado ' + esc(r2.relatorio) : ''}.</span> Confira e clique em <b>Salvar</b>.`;
+      };
+    },
   });
 }
 

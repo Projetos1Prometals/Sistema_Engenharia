@@ -25,16 +25,20 @@ Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
 
 ### Retorno automático (`retornoAutomatico()` em `liga.js`)
 - Toda corrida **do sistema** (não as importadas) gera/atualiza o seu retorno ao ser salva: código
-  `ref-anual-LIGA` (liga com sigla entre parênteses usa só a sigla: "A-532 (FB)" → `34-227-FB`, `siglaLiga()`), `kgVerificado` 0 até pesar (tela Retornos, filtro "Sem peso"), análise = resultado real
-  do laboratório, `auto: true`, `corridaId`. O código fica em `corrida.retornoGerado`.
+  `ref-anual-LIGA` (liga com sigla entre parênteses usa só a sigla: "A-532 (FB)" → `34-227-FB`, `siglaLiga()`), `kgVerificado` 0 até pesar (tela Retornos, filtro "Sem peso"), análise = lida do PDF
+  do laboratório **no retorno** (vale mais que `corrida.real`, que só existe nas corridas antigas importadas), `auto: true`, `corridaId`. O código fica em `corrida.retornoGerado`.
+- A ficha da corrida **não** tem mais o quadro do laboratório (a corrida sai antes do resultado): ficou só "Retorno e certificado". Status, tabela Norma × composição, boletim e certificado usam a análise do retorno gerado e, sem ela, `corrida.real`.
 - Se a liga/número mudar, ou a corrida for excluída, o retorno automático é renomeado/apagado **só** se ainda
   não tiver peso, baixa nem uso em outra corrida. O botão "Atualizar retorno" da ficha serve para peso e código à mão.
 
 ### PDF do laboratório (`laudo.js`)
-- Ficha da corrida → "Ler PDF do laboratório…": lê o certificado de análise da Priner (FOR-LAB-0035) com
-  pdf.js (cdnjs, carregado só quando precisa) e preenche `real` (tabela "Composição / Resultado", valor → símbolo
-  de x mais próximo), `lab.relatorio` (nº do certificado), `lab.data` (emissão) e `lab.empresa` se vazia.
-- Confere "CORRIDA 34 - 227" com refratário-anual da ficha (pergunta se não bater). Não salva sozinho nem guarda o PDF.
+- Botão "Ler PDF do laboratório…" na janela do **retorno** (análise com os 20 elementos + nº do relatório; código
+  vazio vira `ref-anual-SIGLA` da liga escolhida) e no **certificado** (lado direito: preenche `quimica`; corrida vazia
+  vira "34-227"). **Não** fica na ficha da corrida (pedido do usuário).
+- `lerLaudo()` lê o certificado de análise da Priner (FOR-LAB-0035) com pdf.js (cdnjs, carregado só quando precisa):
+  tabela "Composição / Resultado" (valor → símbolo de x mais próximo), nº do certificado, emissão, "CORRIDA 34 - 227".
+- Confere a corrida do PDF com o código do retorno / a corrida do certificado (pergunta se não bater). Não salva
+  sozinho nem guarda o PDF.
 - PDF escaneado (sem texto) não funciona: avisa para digitar à mão.
 
 ### Boletim impresso (Ctrl+P / "Imprimir boletim")

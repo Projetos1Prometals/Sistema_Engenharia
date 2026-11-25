@@ -153,7 +153,7 @@ export function idCorrida(c) {
 
 // Situação da corrida para a lista
 export function statusCorrida(c, liga, retornoGerado) {
-  const real = temAnalise(c.real) ? c.real : (retornoGerado && temAnalise(retornoGerado.analise) ? retornoGerado.analise : null);
+  const real = retornoGerado && temAnalise(retornoGerado.analise) ? retornoGerado.analise : (temAnalise(c.real) ? c.real : null);   // o retorno (PDF do laboratório) vem primeiro
   // Corridas antigas da planilha: só mostramos a análise do retorno, sem julgar dentro/fora
   if (c.origem === 'planilha' && !temAnalise(c.real)) {
     return { cod: 'historico', texto: 'Histórico', cls: 'neutro', real, fora: conferir(real, liga) };
