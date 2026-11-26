@@ -7,14 +7,15 @@
 //  página de consulta #/produto/<código> (a Instrução de Processo vai abrir).
 //  Permissão: tela "modelosClientes" em Usuários e acessos.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.1';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, modoLeitura, baixarArquivo } from '../comum/casca.js?v=1.7.1';
-import { empresa, htmlFolha, fmtDataHora, DECL_PADRAO, CHAVES_EMPRESA } from './folha.js?v=1.7.1';
-import { TIPOS_FOTO, enviarFotos, preencherFotos, urlFoto, apagarFoto } from './fotos.js?v=1.7.1';
+import * as banco from '../comum/banco.js?v=1.7.3';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, modoLeitura, baixarArquivo } from '../comum/casca.js?v=1.7.3';
+import { empresa, htmlFolha, fmtDataHora, DECL_PADRAO, CHAVES_EMPRESA } from './folha.js?v=1.7.3';
+import { TIPOS_FOTO, enviarFotos, preencherFotos, urlFoto, apagarFoto } from './fotos.js?v=1.7.3';
+import { entrarInstrucao, ipsDeCliente, fotoDaIP, FOTOS_IP } from './instrucao.js?v=1.7.3';
 import {
   CAMPOS_IMPORTACAO, autoMapear, paraData, textoCelula, arrumarCep, arrumarCnpj, separarTitulos,
   lerArquivoPlanilha, lerTextoColado, montarXlsx, norm, digitos,
-} from './planilha.js?v=1.7.1';
+} from './planilha.js?v=1.7.3';
 
 export const COL = {
   clientes: 'eng_clientes', modelos: 'eng_mcli_modelos', eventos: 'eng_mcli_eventos', devolucoes: 'eng_mcli_devolucoes',
@@ -199,6 +200,7 @@ const ACOES = {
   'exp-xlsx': t => exportarXlsx(t),
   'exp-json': () => exportarJson(),
   'exp-modelo': t => exportarPlanilhaModelo(t),
+  'ip-importar': () => janelaInstrucao(),
 };
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-acao]');
@@ -337,7 +339,7 @@ function paginaModelo(id) {
         ${bt('Editar', 'editar-modelo', '', `data-id="${esc(id)}"`)}
         ${bt(icone('lixo') + ' Excluir', 'excluir-modelo', 'perigo', `data-id="${esc(id)}"`)}</div>` : ''}
       <div class="cartao"><div class="corpo"><dl class="mc-fatos">
-        ${fato('Código do produto', esc(m.codProduto))}${fato('Modelo / referência', esc(m.referencia))}
+        ${fato('Código do produto', esc(m.codProduto))}${m.ip ? fato('Instrução de Processo', 'IP ' + esc(m.ip)) : ''}${fato('Modelo / referência', esc(m.referencia))}
         ${fato('Total de partes', esc(m.partes ?? ''))}${fato('Material do modelo', esc(m.material))}
         ${fato('Liga da peça', esc(m.liga))}${fato('Localização', esc(m.localizacao))}
         ${fato('NF de entrada', esc(m.nfEntrada))}${fato('Chegada', fmtData(m.dataEntrada))}
@@ -886,6 +888,11 @@ function paginaPlanilha() {
         ${res ? `<p style="margin-top:0"><b>Pronto.</b> ${res.criados} criado(s), ${res.atualizados} atualizado(s)${res.clientesCriados ? `, ${res.clientesCriados} cliente(s) novo(s)` : ''}${res.ignorados ? `, ${res.ignorados} linha(s) sem ${imp.tipo === 'modelos' ? 'descrição' : 'nome'} ignorada(s)` : ''}.</p>` : ''}
         <div class="mc-acoes"><button class="btn pri" data-acao="imp-rodar" ${imp.rodando ? 'disabled' : ''}>${imp.rodando ? 'Importando…' : `Importar ${imp.linhas.length} linha(s)`}</button><button class="btn" data-acao="imp-limpar" ${imp.rodando ? 'disabled' : ''}>Limpar</button></div>
       </div></div>` : ''}` : ''}
+      ${ED ? `<div class="cartao so-ed"><h2>Da Instrução de Processo</h2><div class="corpo">
+        <p class="mut" style="margin-top:0">Traz as IPs com <b>Destino do molde = Retorno para o cliente</b>: cliente, código do produto, descrição, liga e as fotos
+          (caixa frente, caixa traseira e macho). Pode rodar de novo: IP já trazida não é duplicada, só completa o que estiver em branco aqui. Nada é mudado na Instrução de Processo.</p>
+        <div class="mc-acoes"><button class="btn" data-acao="ip-importar">${icone('baixar')} Importar da Instrução de Processo…</button></div>
+      </div></div>` : ''}
       <div class="cartao"><h2>Exportar</h2><div class="corpo">
         <p class="mut" style="margin-top:0">Planilha com modelos, clientes, devoluções e histórico, ou uma cópia completa em JSON.</p>
         <div class="mc-acoes"><button class="btn" data-acao="exp-xlsx">${icone('baixar')} Planilha completa (.xlsx)</button><button class="btn" data-acao="exp-json">${icone('baixar')} Cópia de segurança (.json)</button></div>
@@ -953,6 +960,131 @@ async function rodarImportacao() {
   catch (e) { console.error(e); aviso('Erro ao gravar a importação: ' + (e.code || e.message), 'erro'); }
   imp.rodando = false; imp.resultado = res; pagina.atualizar();
   aviso(`Importação concluída: ${res.criados} criado(s), ${res.atualizados} atualizado(s).`);
+}
+
+// ---------- Da Instrução de Processo (instrucao.js) ----------
+// IP já trazida = modelo com o mesmo nº de IP (campo ip) ou, sem ele, o mesmo código do produto
+function modeloDaIP(ip) {
+  const todos = [...S.modelos.values()];
+  return todos.find(m => Number(m.ip) === ip.n)
+    || (ip.codigo && todos.find(m => !m.ip && m.codProduto && norm(m.codProduto) === norm(ip.codigo))) || null;
+}
+function janelaInstrucao() {
+  janela({
+    titulo: 'Importar da Instrução de Processo',
+    html: `<p class="mut" style="margin-top:0">Use o login da Instrução de Processo. Ele só serve para ler as IPs agora: não fica guardado.</p>
+      <div class="mc-form">
+        <label class="campo l2">E-mail<input class="ent" id="ipEmail" type="email" autocomplete="off"></label>
+        <label class="campo l2">Senha<input class="ent" id="ipSenha" type="password" autocomplete="off"></label>
+        <label class="l3"><input type="checkbox" id="ipFotos" checked> Trazer as fotos (caixa frente, caixa traseira e macho)</label>
+      </div>`,
+    botoes: [
+      { texto: 'Cancelar' },
+      { texto: 'Buscar IPs de cliente', cls: 'pri', acao: async el => {
+        const email = el.querySelector('#ipEmail').value.trim(), senha = el.querySelector('#ipSenha').value, fotos = el.querySelector('#ipFotos').checked;
+        if (!email || !senha) { aviso('Preencha o e-mail e a senha da Instrução de Processo.', 'erro'); return false; }
+        el.querySelectorAll('footer button').forEach(b => { b.disabled = true; });
+        try {
+          aviso('Lendo a Instrução de Processo…');
+          const supa = await entrarInstrucao(email, senha);
+          const ips = await ipsDeCliente(supa);
+          setTimeout(() => janelaIPsEncontradas(supa, ips, fotos), 30);
+        } catch (e) {
+          console.error(e);
+          aviso('Não foi possível ler a Instrução de Processo: ' + (e.message || e), 'erro');
+          el.querySelectorAll('footer button').forEach(b => { b.disabled = false; });
+          return false;
+        }
+      } },
+    ],
+  });
+}
+function janelaIPsEncontradas(supa, ips, fotos) {
+  if (!ips.length) { aviso('Nenhuma IP com destino "Retorno para o cliente" na Instrução de Processo.', 'erro'); return; }
+  const linhas = ips.map(ip => ({ ip, m: modeloDaIP(ip) }));
+  const novos = linhas.filter(l => !l.m).length;
+  janela({
+    titulo: `Instrução de Processo: ${ips.length} IP(s) de cliente`, larga: true,
+    html: `<p class="mut" style="margin-top:0">${novos} nova(s) viram modelo “Na empresa” com a chegada no histórico; ${ips.length - novos} já trazida(s) só completam o que estiver em branco${fotos ? ' (e as fotos que faltarem)' : ''}. Cliente que ainda não existe é criado pelo nome.</p>
+      <div class="tab-wrap"><table class="tab"><thead><tr><th>IP</th><th>Código do produto</th><th>Cliente</th><th>Descrição</th><th>Liga</th><th>Aqui</th></tr></thead><tbody>
+        ${linhas.map(({ ip, m }) => `<tr><td>${ip.n}</td><td>${esc(ip.codigo)}</td><td>${esc(ip.cliente || '—')}</td><td>${esc(ip.descricao)}</td><td>${esc(ip.liga)}</td>
+          <td>${m ? `já existe: <b>${esc(m.codigo)}</b>` : '<span class="ok">novo</span>'}</td></tr>`).join('')}
+      </tbody></table></div>`,
+    botoes: [
+      { texto: 'Cancelar' },
+      { texto: `Importar ${ips.length} IP(s)`, cls: 'pri', acao: el => {
+        el.querySelectorAll('footer button').forEach(b => { b.disabled = true; });
+        importarIPs(supa, ips, fotos);
+      } },
+    ],
+  });
+}
+async function importarIPs(supa, ips, comFotos) {
+  const res = { criados: 0, completados: 0, clientes: 0, fotos: 0, falhas: 0 };
+  const agora = agoraISO();
+  const porNome = new Map([...S.clientes.values()].filter(c => c.nome).map(c => [norm(c.nome), c.id]));
+  const codigos = [...S.modelos.values()].map(m => m.codigo);
+  const fotosFaltando = async (n, jaTem) => {
+    const out = [];
+    if (!comFotos) return out;
+    for (const [slot, tipo] of Object.entries(FOTOS_IP)) {
+      if (jaTem.has(tipo)) continue;
+      try {
+        const blob = await fotoDaIP(supa, n, slot);
+        if (!blob) continue;
+        const [id] = await enviarFotos([blob]);
+        out.push({ id, tipo }); res.fotos++;
+      } catch (e) { console.warn('foto da IP', n, slot, e); res.falhas++; }
+    }
+    return out;
+  };
+  for (let i = 0; i < ips.length; i++) {
+    const ip = ips[i];
+    aviso(`Importando IP ${ip.n} (${i + 1} de ${ips.length})…`);
+    try {
+      const ops = [];
+      let cid = '';
+      if (ip.cliente) {
+        cid = porNome.get(norm(ip.cliente)) || '';
+        if (!cid) {
+          cid = novoId(); porNome.set(norm(ip.cliente), cid);
+          const c = { nome: ip.cliente, criadoEm: agora, origem: 'instrucao' };
+          S.clientes.set(cid, { ...c, id: cid });
+          ops.push({ col: COL.clientes, id: cid, dados: c }); res.clientes++;
+        }
+      }
+      const corpo = { clienteId: cid, codProduto: ip.codigo, descricao: ip.descricao || ip.codigo || 'IP ' + ip.n, liga: ip.liga, ip: ip.n };
+      const m = modeloDaIP(ip);
+      if (m) {
+        const mud = Object.fromEntries(Object.entries(corpo).filter(([k, v]) => v !== '' && v != null && (m[k] === '' || m[k] == null)));
+        const novas = await fotosFaltando(ip.n, new Set((m.fotos || []).map(f => f.tipo)));
+        if (novas.length) mud.fotos = [...(m.fotos || []), ...novas];
+        if (Object.keys(mud).length) {
+          const d = { ...semMeta(S.modelos.get(m.id)), ...mud, atualizadoEm: agora };
+          S.modelos.set(m.id, { ...d, id: m.id });
+          ops.push({ col: COL.modelos, id: m.id, dados: d }); res.completados++;
+        }
+      } else {
+        const id = novoId(), codigo = proximoCodigo(prefixo('modelo'), codigos);
+        codigos.push(codigo);
+        const data = paraData(ip.data) || hoje();
+        const fotos = await fotosFaltando(ip.n, new Set());
+        const d = { ...corpo, codigo, referencia: '', partes: null, material: '', localizacao: '', nfEntrada: '', dataEntrada: data, obs: '',
+          status: 'na_empresa', fotos, ultimaMov: data, criadoEm: agora, origem: 'instrucao' };
+        S.modelos.set(id, { ...d, id });
+        ops.push({ col: COL.modelos, id, dados: d });
+        ops.push({ col: COL.eventos, id: novoId(), dados: { tipo: 'entrada', modeloId: id, clienteId: cid, data, nf: '', partes: null,
+          descricao: `Importado da Instrução de Processo (IP ${ip.n})`, fotos: [], criadoEm: agora } });
+        res.criados++;
+      }
+      if (ops.length) await banco.emLote(ops);   // grava IP por IP: se parar no meio, o que foi feito fica
+    } catch (e) { console.error('IP', ip.n, e); res.falhas++; }
+  }
+  supa.auth.signOut().catch(() => {});
+  aviso(`Instrução de Processo: ${res.criados} modelo(s) novo(s), ${res.completados} completado(s)` +
+    (res.clientes ? `, ${res.clientes} cliente(s) novo(s)` : '') + (comFotos ? `, ${res.fotos} foto(s)` : '') +
+    (res.falhas ? `. ${res.falhas} falha(s): veja o console (F12).` : '.'), res.falhas ? 'erro' : undefined);
+  if (pagina && !pagina.fixa) pagina.atualizar();
 }
 
 async function exportarXlsx(btn) {

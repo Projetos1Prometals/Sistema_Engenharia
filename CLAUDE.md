@@ -78,7 +78,7 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   **nunca** enviar planilhas para o GitHub.
 
 ## Almoxarifado Prometals (`modelos/`) — modelos da própria Prometals
-- No menu, seção Modelos: item "Almoxarifado Prometals" (as 4 telas abrem embaixo dele quando se está no módulo).
+- No menu, seção Modelos (pedido do usuário): "Almoxarifado modelos" (Prateleiras, Modelos, Ruas abrem embaixo), "Modelos Prometals" (Lista comercial embaixo) e "Modelos de clientes".
 - `regras.js` (sem tela), `modelos.js` (telas), `importar.js` (planilha Almoxarifado_Modelos), `modelos.css`.
 - Coleções: `eng_modelos` (id = código normalizado por `idModelo()`), `eng_ruas` (id = letra).
 - **Código não pode repetir** (o id sai do código; maiúsculas/espaços não contam). Na importação, o
@@ -114,6 +114,11 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   **`#/produto/<código>`** (descrição, referência/desenho, cliente, liga, partes, material, localização, situação, fotos
   frente/traseira/macho). A Instrução de Processo vai abrir
   `…/modelos-clientes/index.html#/produto/<código>` (quem abre precisa de login e de "Modelos de clientes" ao menos "Só ver").
+- **Da Instrução de Processo** (`instrucao.js`, botão em Importar / Exportar): pede o login da Instrução (Supabase,
+  sessão só na memória), lê `kv` (`ip:<n>:data` + `cfg:ips`) e traz as IPs com `peca.destino` = "Retorno para o cliente"
+  (ou o antigo "Volta para o dono"): cliente (criado pelo nome), `codProduto`, descrição, liga, `ip` = nº, e as fotos
+  `caixa_frente`/`caixa_traseira`/`macho` → frente/traseira/macho. IP já trazida (mesmo `ip`, ou mesmo código do produto)
+  só completa campos vazios e fotos que faltam. Nunca grava na Instrução de Processo.
 - Permissão: **uma tela só**, `modelosClientes` (ver/editar), para o módulo inteiro. Regras: `leMcli()` / `editaMcli()`.
   comercial2@ (e o admin) editam: `semearAcessos()` grava o comercial2@ com só `modelosClientes: 'editar'`.
 

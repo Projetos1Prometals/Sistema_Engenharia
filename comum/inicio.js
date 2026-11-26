@@ -1,8 +1,8 @@
 // =====================================================================
 //  comum/inicio.js — tela de entrada (login) e visão geral dos módulos
 // =====================================================================
-import * as banco from './banco.js?v=1.7.1';
-import { montar, icone, esc, aviso, aplicarTema, podeVer, TELAS_LIGA, TELAS_MODELOS, ADMINS } from './casca.js?v=1.7.1';
+import * as banco from './banco.js?v=1.7.3';
+import { montar, icone, esc, aviso, aplicarTema, podeVer, TELAS_LIGA, TELAS_MODELOS, ADMINS } from './casca.js?v=1.7.3';
 import { COL, saldos, statusCorrida, acharLiga } from '../liga/calculo.js?v=1.4.0';
 
 aplicarTema();
@@ -56,8 +56,8 @@ async function visaoGeral() {
   const C = document.getElementById('conteudo');
   const nome = (banco.usuario() && banco.usuario().nome) || '';
   // primeira tela liberada de cada módulo (Usuários e acessos)
-  const liga = TELAS_LIGA.find(podeVer), modelos = TELAS_MODELOS.find(podeVer);
-  const algum = liga || modelos || podeVer('certificados') || podeVer('modelosClientes');
+  const liga = TELAS_LIGA.find(podeVer), modelos = TELAS_MODELOS.filter(t => t !== 'comercial').find(podeVer);
+  const algum = liga || modelos || podeVer('comercial') || podeVer('certificados') || podeVer('modelosClientes');
   C.innerHTML = `
     <h1 class="titulo">Olá${nome && banco.modo() === 'firebase' ? ', ' + esc(nome.split(' ')[0].replace(/^\w/, c => c.toUpperCase())) : ''}</h1>
     <p class="sub">Sistema Engenharia: tudo da Engenharia num lugar só.</p>
@@ -66,7 +66,8 @@ async function visaoGeral() {
     <div class="kpis" id="kpis"></div>
     <div class="modulos">
       ${!liga ? '' : `<a class="modulo" href="liga/index.html#/${liga}">${icone('chama')}<h3>Cálculo de Liga</h3><p>Corridas, carga do forno, retornos com saldo, boletim para o forneiro e resultado do laboratório.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
-      ${!modelos ? '' : `<a class="modulo" href="modelos/index.html#/${modelos === 'modelos' ? 'lista' : modelos}">${icone('grade')}<h3>Almoxarifado Prometals</h3><p>Modelos da Prometals: prateleiras, manutenção, histórico, desenho (PDF) e lista comercial.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!modelos ? '' : `<a class="modulo" href="modelos/index.html#/${modelos === 'modelos' ? 'lista' : modelos}">${icone('grade')}<h3>Almoxarifado modelos</h3><p>Modelos da Prometals: prateleiras, ruas, manutenção, histórico e desenho (PDF).</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!podeVer('comercial') ? '' : `<a class="modulo" href="modelos/index.html#/comercial">${icone('documento')}<h3>Modelos Prometals</h3><p>Lista comercial dos refinadores: dados técnicos e situação no estoque.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
       ${!podeVer('modelosClientes') ? '' : `<a class="modulo" href="modelos-clientes/index.html#/painel">${icone('cubo')}<h3>Modelos de clientes</h3><p>Modelos que os clientes deixam na empresa: chegada com NF, fotos, consertos e o documento de devolução.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
       ${!podeVer('certificados') ? '' : `<a class="modulo" href="certificados/index.html#/lista">${icone('certificado')}<h3>Certificados</h3><p>Certificado de qualidade com a análise química da corrida: busca por OP, edição na folha, impressão A4.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
       ${!podeVer('instrucao') ? '' : `<a class="modulo" href="https://projetos1prometals.github.io/instrucao-processo-prometals/" target="_blank" rel="noopener">${icone('prancheta')}<h3>Instrução de Processo</h3><p>Instruções por produto, com fotos, para a produção. Abre o app atual numa aba nova.</p><div class="rod"><span class="tag info">App separado</span></div></a>`}

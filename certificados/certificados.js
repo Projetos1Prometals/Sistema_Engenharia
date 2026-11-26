@@ -6,8 +6,8 @@
 //  (corrida, material, OP da liga e análise do laboratório já preenchidos)
 //  e a conferência usa as normas de "Ligas e normas".
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.1';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, podeVer, semAcesso, baixarArquivo } from '../comum/casca.js?v=1.7.1';
+import * as banco from '../comum/banco.js?v=1.7.3';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, podeVer, semAcesso, baixarArquivo } from '../comum/casca.js?v=1.7.3';
 import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.5.1';
 import { lerLaudoOuAvisar } from '../liga/laudo.js?v=1.5.6';
 import { criarCertificadosAuto, criarCertificadosDe, retornosSemCertificado, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=1.5.7';

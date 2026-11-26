@@ -3,8 +3,8 @@
 //  Telas: Prateleiras (mapa), Modelos (lista e ficha), Lista comercial,
 //  Ruas e importação. Só a Engenharia edita (podeEditar); os outros só consultam.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.1';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, TELAS_MODELOS, baixarArquivo } from '../comum/casca.js?v=1.7.1';
+import * as banco from '../comum/banco.js?v=1.7.3';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, TELAS_MODELOS, baixarArquivo } from '../comum/casca.js?v=1.7.3';
 import {
   COL, SITUACOES, EXTENSOES, CAMPOS_COMERCIAIS, normCodigo, idModelo, chaveDesenho, situacao, lerPosicao,
   posicoesDaRua, ocupacao, chaveDiametro, lerVolumes,
@@ -22,7 +22,7 @@ function recalcular() {
   S.ocup = ocupacao(S.modelos);
 }
 
-const est = await montar({ ativo: 'mapa', trilha: ['Almoxarifado Prometals'] });
+const est = await montar({ ativo: location.hash.startsWith('#/comercial') ? 'comercial' : 'mapa', trilha: [location.hash.startsWith('#/comercial') ? 'Modelos Prometals' : 'Almoxarifado modelos'] });
 MAN = podeEditar('manutencao');
 const C = document.getElementById('conteudo');
 C.innerHTML = '<div class="vazio">Carregando dados…</div>';
@@ -90,7 +90,7 @@ const somenteLeitura = () => ED ? '' : `<div class="faixa">${icone('olho')} ${MA
 // =====================================================================
 function paginaMapa() {
   marcarMenu('mapa');
-  definirTrilha(['Almoxarifado Prometals', 'Prateleiras']);
+  definirTrilha(['Almoxarifado modelos', 'Prateleiras']);
   const f = filtros.mapa;
   C.innerHTML = `
     <div class="cab">
@@ -181,7 +181,7 @@ function gravarModelo(m) {
 // =====================================================================
 function paginaLista() {
   marcarMenu('modelos');
-  definirTrilha(['Almoxarifado Prometals', 'Modelos']);
+  definirTrilha(['Almoxarifado modelos', 'Modelos']);
   const f = filtros.lista;
   C.innerHTML = `
     <div class="cab">
@@ -244,7 +244,7 @@ function paginaModelo(id, params) {
   if (!orig && !ED) { location.hash = '#/lista'; return; }
   const d = orig ? JSON.parse(JSON.stringify(semMeta(orig))) : { codigo: '', descricao: '', volumes: '', posicao: lerPosicao(params.get('pos')) ? lerPosicao(params.get('pos')).pos : '', situacao: 'disponivel', obs: '', comercial: null, historico: [] };
   d.comercial = d.comercial || {};
-  definirTrilha(['Almoxarifado Prometals', 'Modelos', orig ? orig.codigo : 'Novo modelo']);
+  definirTrilha(['Almoxarifado modelos', 'Modelos', orig ? orig.codigo : 'Novo modelo']);
 
   C.innerHTML = `<div id="pgModelo">
     <div class="cab">
@@ -443,7 +443,7 @@ async function abrirDesenho(m, baixar) {
 // =====================================================================
 function paginaComercial() {
   marcarMenu('comercial');
-  definirTrilha(['Almoxarifado Prometals', 'Lista comercial']);
+  definirTrilha(['Modelos Prometals', 'Lista comercial']);
   const f = filtros.comercial;
   C.innerHTML = `
     <div class="cab"><div class="cresce"><h1 class="titulo">Lista comercial — refinadores</h1><p class="sub">Dados técnicos e situação no estoque (atualiza sozinha pelas prateleiras). Clique no PDF para ver o desenho.</p></div></div>
@@ -497,7 +497,7 @@ function paginaComercial() {
 // =====================================================================
 function paginaRuas() {
   marcarMenu('ruas');
-  definirTrilha(['Almoxarifado Prometals', 'Ruas e importação']);
+  definirTrilha(['Almoxarifado modelos', 'Ruas e importação']);
   C.innerHTML = `
     <div class="cab"><div class="cresce"><h1 class="titulo">Ruas e importação</h1><p class="sub">As ruas do almoxarifado, quantas posições cada uma tem, e a importação da planilha.</p></div>
       ${ED ? `<button class="btn pri" id="btNovaRua">${icone('mais')} Nova rua</button>` : ''}</div>

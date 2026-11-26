@@ -4,8 +4,8 @@
 //  Grava em eng_acessos (id = e-mail em minúsculas); o firestore.rules lê
 //  a mesma coleção, então o bloqueio vale de verdade no banco.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.1';
-import { montar, aviso, janela, esc, icone, ehAdmin, semAcesso, TELAS, ADMINS, COL_ACESSOS, RESTRINGIR } from '../comum/casca.js?v=1.7.1';
+import * as banco from '../comum/banco.js?v=1.7.3';
+import { montar, aviso, janela, esc, icone, ehAdmin, semAcesso, TELAS, ADMINS, COL_ACESSOS, RESTRINGIR } from '../comum/casca.js?v=1.7.3';
 
 await montar({ ativo: 'usuarios', trilha: ['Sistema', 'Usuários e acessos'] });
 const C = document.getElementById('conteudo');

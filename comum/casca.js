@@ -2,9 +2,9 @@
 //  comum/casca.js — barra lateral, topo, login obrigatório e ajudantes
 //  de tela (avisos, janelas, ícones, formatação) usados por todos os módulos.
 // =====================================================================
-import * as banco from './banco.js?v=1.7.1';
+import * as banco from './banco.js?v=1.7.3';
 
-export const VERSAO = '1.7.1';
+export const VERSAO = '1.7.3';
 
 // ---------- quem acessa o quê (tela Usuários e acessos) ----------
 // Cada usuário tem um documento em eng_acessos (id = e-mail em minúsculas):
@@ -20,11 +20,11 @@ export const TELAS = [
   { id: 'retornos', grupo: 'Cálculo de Liga', nome: 'Retornos', niveis: ['ver', 'editar'], dica: 'Peso, análise e PDF do laboratório' },
   { id: 'ligas', grupo: 'Cálculo de Liga', nome: 'Ligas e normas', niveis: ['ver', 'editar'] },
   { id: 'materiais', grupo: 'Cálculo de Liga', nome: 'Sucatas e ferroligas', niveis: ['ver', 'editar'] },
-  { id: 'mapa', grupo: 'Almoxarifado Prometals', nome: 'Prateleiras', niveis: ['ver'], dica: 'Pôr modelo numa vaga segue o "Editar" de Modelos' },
-  { id: 'modelos', grupo: 'Almoxarifado Prometals', nome: 'Modelos', niveis: ['ver', 'editar'], dica: 'Cadastro, posição e PDF do desenho' },
-  { id: 'manutencao', grupo: 'Almoxarifado Prometals', nome: 'Manutenção de modelos', niveis: ['editar'], semMenu: true, dica: 'Só registrar a ida e a volta da manutenção' },
-  { id: 'comercial', grupo: 'Almoxarifado Prometals', nome: 'Lista comercial', niveis: ['ver'] },
-  { id: 'ruas', grupo: 'Almoxarifado Prometals', nome: 'Ruas e importação', niveis: ['ver', 'editar'] },
+  { id: 'mapa', grupo: 'Almoxarifado modelos', nome: 'Prateleiras', niveis: ['ver'], dica: 'Pôr modelo numa vaga segue o "Editar" de Modelos' },
+  { id: 'modelos', grupo: 'Almoxarifado modelos', nome: 'Modelos', niveis: ['ver', 'editar'], dica: 'Cadastro, posição e PDF do desenho' },
+  { id: 'manutencao', grupo: 'Almoxarifado modelos', nome: 'Manutenção de modelos', niveis: ['editar'], semMenu: true, dica: 'Só registrar a ida e a volta da manutenção' },
+  { id: 'comercial', grupo: 'Modelos Prometals', nome: 'Modelos Prometals (lista comercial)', niveis: ['ver'] },
+  { id: 'ruas', grupo: 'Almoxarifado modelos', nome: 'Ruas e importação', niveis: ['ver', 'editar'] },
   { id: 'modelosClientes', grupo: 'Modelos de clientes', nome: 'Modelos de clientes', niveis: ['ver', 'editar'], dica: 'Painel, modelos, devoluções, clientes, planilhas e configurações (todo o módulo)' },
   { id: 'certificados', grupo: 'Qualidade', nome: 'Certificados', niveis: ['ver', 'editar'] },
   { id: 'instrucao', grupo: 'Processo', nome: 'Instrução de Processo (atalho)', niveis: ['ver'], dica: 'Só o atalho no menu: o app fica no Supabase, com login próprio' },
@@ -170,13 +170,15 @@ const MENU = [
     { id: 'ligas', nome: 'Ligas e normas', ic: 'frasco', href: 'liga/index.html#/ligas' },
     { id: 'materiais', nome: 'Sucatas e ferroligas', ic: 'caixas', href: 'liga/index.html#/materiais' },
   ] },
-  // Dois módulos; as telas de cada um aparecem embaixo do item quando se está nele
+  // Pedido do usuário: 3 tópicos. Item com filhos: as telas aparecem embaixo dele quando se está nele.
   { sec: 'Modelos', itens: [
-    { id: 'almox', nome: 'Almoxarifado Prometals', ic: 'grade', filhos: [
+    { id: 'almox', nome: 'Almoxarifado modelos', ic: 'grade', filhos: [
       { id: 'mapa', nome: 'Prateleiras', ic: 'grade', href: 'modelos/index.html#/mapa' },
       { id: 'modelos', nome: 'Modelos', ic: 'cubo', href: 'modelos/index.html#/lista' },
-      { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
       { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
+    ] },
+    { id: 'prometals', nome: 'Modelos Prometals', ic: 'cubo', filhos: [
+      { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
     ] },
     { id: 'mcli', nome: 'Modelos de clientes', ic: 'cubo', filhos: [
       { id: 'mcli-painel', tela: 'modelosClientes', nome: 'Painel', ic: 'grade', href: 'modelos-clientes/index.html#/painel' },
@@ -212,8 +214,9 @@ function htmlMenu(ativo) {
     if (!it.filhos) return htmlItem(it, ativo);
     const filhos = it.filhos.filter(noMenu);
     const aberto = it.id === ativo || filhos.some(f => f.id === ativo);
+    // os filhos sempre vão no HTML; marcarMenu() mostra só os do item em que se está
     return htmlItem({ ...it, href: filhos[0].href }, null, 'pai' + (aberto ? ' aberto' : '')) +
-      (aberto ? `<div class="filhos">${filhos.map(f => htmlItem(f, ativo, 'filho')).join('')}</div>` : '');
+      `<div class="filhos" ${aberto ? '' : 'style="display:none"'}>${filhos.map(f => htmlItem(f, ativo, 'filho')).join('')}</div>`;
   }).join('')).join('');
 }
 
@@ -302,6 +305,13 @@ export function definirTrilha(partes) {
 }
 export function marcarMenu(id) {
   document.querySelectorAll('#menuLateral a').forEach(a => a.classList.toggle('ativo', a.dataset.menu === id));
+  // abre só o grupo de filhos que tem a tela atual (ex.: Prateleiras ↔ Modelos Prometals na mesma página)
+  document.querySelectorAll('#menuLateral .filhos').forEach(f => {
+    const dentro = [...f.querySelectorAll('a')].some(a => a.dataset.menu === id);
+    f.style.display = dentro ? '' : 'none';
+    const pai = f.previousElementSibling;
+    if (pai && pai.classList.contains('pai')) pai.classList.toggle('aberto', dentro);
+  });
 }
 
 // ---------- avisos rápidos ----------
