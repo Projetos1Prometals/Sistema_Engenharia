@@ -3,8 +3,8 @@
 //  Telas: Corridas (lista e ficha), Retornos, Ligas e normas,
 //  Sucatas e ferroligas, Configurações (forno, contadores, importação, backup).
 // =====================================================================
-import * as banco from '../comum/banco.js';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo, podeEditar } from '../comum/casca.js';
+import * as banco from '../comum/banco.js?v=1.7.1';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo, podeEditar, podeVer, modoLeitura, semAcesso, TELAS_LIGA } from '../comum/casca.js?v=1.7.1';
 import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,
@@ -29,6 +29,7 @@ const filtros = {
 };
 let pagina = null;     // { nome, atualizar() }
 let editor = null;     // corrida aberta: { id, d (rascunho), sujo }
+let ED = true;         // pode editar a tela aberta? (Usuários e acessos)
 
 const cfg = () => S.config || CONFIG_INICIAL;
 const ligaDe = nome => acharLiga(S.ligas, nome);
@@ -60,16 +61,19 @@ function chegou(nome, info) {
     if (!pagina) rotear(); else pagina.atualizar();
   }
 }
-banco.ouvirColecao(COL.ligas, (l, i) => { S.ligas = l.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || String(a.nome).localeCompare(b.nome)); chegou('ligas', i); }, erroBanco);
-banco.ouvirColecao(COL.materiais, (l, i) => { S.materiais = l.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999)); chegou('materiais', i); }, erroBanco);
-banco.ouvirColecao(COL.retornos, (l, i) => { S.retornos = l; chegou('retornos', i); }, erroBanco);
-banco.ouvirColecao(COL.corridas, (l, i) => { S.corridas = l; chegou('corridas', i); }, erroBanco);
-banco.ouvirDoc(COL.config, 'liga', (d, i) => { S.config = d; chegou('config', i); }, erroBanco);
+if (!TELAS_LIGA.some(podeVer)) semAcesso(C);   // nenhuma tela do Cálculo de Liga liberada: nem lê os dados
+else {
+  banco.ouvirColecao(COL.ligas, (l, i) => { S.ligas = l.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || String(a.nome).localeCompare(b.nome)); chegou('ligas', i); }, erroBanco);
+  banco.ouvirColecao(COL.materiais, (l, i) => { S.materiais = l.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999)); chegou('materiais', i); }, erroBanco);
+  banco.ouvirColecao(COL.retornos, (l, i) => { S.retornos = l; chegou('retornos', i); }, erroBanco);
+  banco.ouvirColecao(COL.corridas, (l, i) => { S.corridas = l; chegou('corridas', i); }, erroBanco);
+  banco.ouvirDoc(COL.config, 'liga', (d, i) => { S.config = d; chegou('config', i); }, erroBanco);
+}
 
 function erroBanco(e) {
   const permissao = e && /permission/i.test(e.code || e.message || '');
   C.innerHTML = `<div class="faixa verm">${permissao
-    ? 'Seu usuário não tem permissão para ler os dados da Engenharia. Peça para incluir seu e-mail nas Regras do Firestore.'
+    ? 'Seu usuário não tem permissão para ler os dados do Cálculo de Liga. Peça para a Engenharia liberar em Usuários e acessos.'
     : 'Erro ao ler o banco de dados: ' + esc(e && (e.message || e.code))}</div>`;
 }
 
@@ -77,6 +81,7 @@ function erroBanco(e) {
 // Só decide depois que o servidor confirmar que está vazio, para nunca sobrescrever dados reais.
 async function semearSePreciso() {
   if (S.semeado) return;
+  if (!podeEditar('config') && !podeEditar('ligas')) return;
   const confirmado = ['ligas', 'materiais', 'config'].every(k => S.servidor[k]);
   if (!confirmado) return;
   S.semeado = true;
@@ -84,7 +89,7 @@ async function semearSePreciso() {
   if (!S.ligas.length) LIGAS_INICIAIS.forEach((l, i) => { const { id, ...dados } = l; ops.push({ col: COL.ligas, id: id || normLiga(l.nome), dados: { ...dados, ordem: i } }); });
   // 2026-11: a liga "FB" passou a se chamar "A-532 (FB)" (o retorno continua 34-227-FB; o FB vira apelido)
   const fb = S.ligas.find(l => l.nome === 'FB');
-  if (fb && podeEditar()) ops.push({ col: COL.ligas, id: fb.id, dados: { ...semMeta(fb), nome: 'A-532 (FB)', apelidos: [...new Set(['FB', ...(fb.apelidos || [])])] } });
+  if (fb && podeEditar('ligas')) ops.push({ col: COL.ligas, id: fb.id, dados: { ...semMeta(fb), nome: 'A-532 (FB)', apelidos: [...new Set(['FB', ...(fb.apelidos || [])])] } });
   if (!S.materiais.length) MATERIAIS_INICIAIS.forEach(m => ops.push({ col: COL.materiais, id: m.id, dados: m }));
   if (!S.config) ops.push({ col: COL.config, id: 'liga', dados: CONFIG_INICIAL });
   if (ops.length) {
@@ -109,6 +114,12 @@ function rotear() {
   const h = (location.hash || '#/corridas').slice(2).split('/');
   editor = null;
   window.scrollTo(0, 0);
+  // tela de cada rota (Usuários e acessos): sem acesso → mensagem; só ver → campos travados
+  const tela = { corrida: 'corridas', retornos: 'retornos', ligas: 'ligas', materiais: 'materiais', config: 'config', amostras: 'amostras' }[h[0]] || 'corridas';
+  ED = podeEditar(tela);
+  modoLeitura(!ED && podeVer(tela));
+  if (!podeVer(tela)) { pagina = { nome: 'semacesso', atualizar() {} }; marcarMenu(tela); return semAcesso(C); }
+  if (h[0] === 'corrida' && !ED && (h[1] || 'nova') === 'nova') { location.replace('#/corridas'); return; }
   if (h[0] === 'corrida') return paginaCorrida(decodeURIComponent(h[1] || 'nova'));
   if (h[0] === 'retornos') return paginaRetornos();
   if (h[0] === 'ligas') return paginaLigas();
@@ -136,11 +147,11 @@ function paginaCorridas() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Corridas</h1><p class="sub">Carga do forno, boletim para o forneiro e resultado do laboratório de cada corrida.</p></div>
-      <a class="btn" href="#/amostras" title="Etiquetas do saquinho e dos retornos e o formulário do laboratório">${icone('tubo')} Amostras do dia</a>
-      <a class="btn pri" href="#/corrida/nova">${icone('mais')} Nova corrida</a>
+      ${podeVer('amostras') ? `<a class="btn" href="#/amostras" title="Etiquetas do saquinho e dos retornos e o formulário do laboratório">${icone('tubo')} Amostras do dia</a>` : ''}
+      <a class="btn pri so-ed" href="#/corrida/nova">${icone('mais')} Nova corrida</a>
     </div>
     <div class="kpis" id="kpis"></div>
-    <div class="cartao"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div class="cartao livre"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <div class="fichas" id="chips"></div>
       <select class="ent" id="fLiga" style="width:auto;min-width:150px">${optLigas(f.liga, 'Todas as ligas')}</select>
       <div class="busca">${icone('busca')}<input class="ent" id="fq" placeholder="Buscar nº da corrida, OP, FS, liga ou retorno…" value="${esc(f.q)}"></div>
@@ -282,9 +293,9 @@ function paginaCorrida(id) {
     <div class="cab nao-imprimir">
       <a class="btn" href="#/corridas">${icone('voltar')}</a>
       <div class="cresce"><h1 class="titulo" id="tituloCorrida"></h1><p class="sub" id="subCorrida"></p></div>
-      ${orig ? `<button class="btn perigo" id="btExcluir">${icone('lixo')} Excluir</button>` : ''}
+      ${orig ? `<button class="btn perigo so-ed" id="btExcluir">${icone('lixo')} Excluir</button>` : ''}
       <button class="btn" id="btBoletim">${icone('impressora')} Imprimir boletim</button>
-      <button class="btn pri" id="btSalvar">${icone('salvar')} Salvar corrida</button>
+      <button class="btn pri so-ed" id="btSalvar">${icone('salvar')} Salvar corrida</button>
     </div>
     ${!ed.importada ? '' : orig.controle && !temAnalise(orig.estimadoPlanilha)
       ? `<div class="faixa lar nao-imprimir">Corrida importada da planilha Controle de Corrida (aba ${esc(orig.controle.aba)}, linha ${esc(orig.controle.linha)}). Essa planilha não tem a composição estimada${orig.controle.total ? `; total na planilha ${fmtKg(orig.controle.total)} kg${orig.controle.recarga ? ` (com ${fmtKg(orig.controle.recarga)} kg de recarga)` : ''}` : ''}.</div>`
@@ -306,11 +317,11 @@ function paginaCorrida(id) {
       </div>
 
       <div class="grade2">
-        <div class="cartao"><h2>Retornos<span class="cresce"></span><button class="btn peq" id="btAddRet">${icone('mais')} Retorno</button></h2><div class="corpo" id="boxRetornos"></div></div>
+        <div class="cartao"><h2>Retornos<span class="cresce"></span><button class="btn peq so-ed" id="btAddRet">${icone('mais')} Retorno</button></h2><div class="corpo" id="boxRetornos"></div></div>
         <div class="cartao"><h2>Sucatas (kg)</h2><div class="corpo"><div class="grade-kg" id="boxSucatas"></div></div></div>
       </div>
       <div class="cartao"><h2>Correção — elementos de liga (kg)</h2><div class="corpo"><div class="grade-kg" id="boxLigas"></div></div></div>
-      <div class="cartao"><h2>Entrada manual<span class="cresce"></span><span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">material fora do cadastro (forma perdida, retorno sem análise…)</span><button class="btn peq" id="btAddMan">${icone('mais')} Entrada</button></h2><div class="corpo" id="boxManuais"></div></div>
+      <div class="cartao"><h2>Entrada manual<span class="cresce"></span><span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">material fora do cadastro (forma perdida, retorno sem análise…)</span><button class="btn peq so-ed" id="btAddMan">${icone('mais')} Entrada</button></h2><div class="corpo" id="boxManuais"></div></div>
       <div class="cartao"><h2>Retorno e certificado<span class="cresce"></span><span id="retGeradoInfo"></span></h2><div class="corpo" id="boxLab"></div></div>
       <div class="cartao"><h2>Observações</h2><div class="corpo"><textarea class="ent" data-f="obs" placeholder="Anotações da corrida">${esc(d.obs || '')}</textarea></div></div>
     </div>
@@ -417,7 +428,7 @@ function paginaCorrida(id) {
         </select>
         ${entNum(`data-ret="${i}" data-k="kg" placeholder="solicitado" title="Solicitado (kg): entra no forno e na composição"`, u.kg)}
         ${entNum(`data-ret="${i}" data-k="recarga" placeholder="recarga" title="Recarga (kg): separada pelo forneiro; não entra no forno, mas sai do saldo"`, u.recarga)}
-        <button class="botao-ic" data-del-ret="${i}" title="Tirar este retorno">${icone('lixo')}</button>
+        <button class="botao-ic so-ed" data-del-ret="${i}" title="Tirar este retorno">${icone('lixo')}</button>
         <div class="ret-info" id="retInfo${i}"></div>
       </div>`;
     }).join('') + (disponiveis.length ? '' : '<div class="mut">Nenhum retorno com saldo cadastrado. Cadastre em Retornos ou importe a planilha.</div>');
@@ -439,7 +450,7 @@ function paginaCorrida(id) {
         <td style="min-width:180px">${ent(`data-man="${i}" data-k="desc" placeholder="ex.: Forma perdida"`, m.desc)}</td>
         <td style="min-width:80px">${entNum(`data-man="${i}" data-k="kg"`, m.kg)}</td>
         ${ELEMENTOS.map(e => `<td>${entNum(`data-man="${i}" data-k="${e}"`, (m.analise || {})[e])}</td>`).join('')}
-        <td><button class="botao-ic" data-del-man="${i}" title="Tirar">${icone('lixo')}</button></td></tr>`).join('')}
+        <td><button class="botao-ic so-ed" data-del-man="${i}" title="Tirar">${icone('lixo')}</button></td></tr>`).join('')}
     </tbody></table></div>`;
   }
 
@@ -449,8 +460,8 @@ function paginaCorrida(id) {
     box.innerHTML = `
       <p class="mut" style="margin:0 0 10px">A análise do laboratório vai no retorno desta corrida: <a href="#/retornos">Retornos</a> → abra o retorno → <b>Ler PDF do laboratório</b>.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn peq" id="btGerarRet">${icone('reciclar')} ${d.retornoGerado ? 'Atualizar retorno ' + esc(d.retornoGerado) : 'Gerar retorno desta corrida'}</button>
-        ${ed.id ? `<a class="btn peq" href="${banco.raiz('certificados/index.html')}#/novo?corrida=${encodeURIComponent(ed.id)}" title="Cria o certificado de qualidade já com a análise desta corrida">${icone('certificado')} Novo certificado</a>` : ''}
+        <button class="btn peq so-ed" id="btGerarRet">${icone('reciclar')} ${d.retornoGerado ? 'Atualizar retorno ' + esc(d.retornoGerado) : 'Gerar retorno desta corrida'}</button>
+        ${ed.id && podeEditar('certificados') ? `<a class="btn peq" href="${banco.raiz('certificados/index.html')}#/novo?corrida=${encodeURIComponent(ed.id)}" title="Cria o certificado de qualidade já com a análise desta corrida">${icone('certificado')} Novo certificado</a>` : ''}
         <span id="certsDaCorrida"></span>
       </div>`;
     if (ed.id) mostrarCertificados();
@@ -770,9 +781,9 @@ function paginaAmostras() {
     <div class="cab">
       <a class="btn" href="#/corridas">${icone('voltar')}</a>
       <div class="cresce"><h1 class="titulo">Amostras do dia</h1><p class="sub">Etiqueta do saquinho das amostras (10 × 5 cm), etiqueta de cada retorno (meia folha A4, duas por folha, ou 10 × 5 cm) e o formulário do laboratório (A4), com as corridas do dia.</p></div>
-      <button class="btn" id="btDadosLab">${icone('engrenagem')} Dados do formulário</button>
+      <button class="btn so-ed" id="btDadosLab">${icone('engrenagem')} Dados do formulário</button>
     </div>
-    <div class="cartao"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+    <div class="cartao livre"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
       <button class="btn" id="btDiaAnt" title="Dia anterior">${icone('voltar')}</button>
       <label class="campo" style="width:auto">Data das corridas<input class="ent" type="date" id="aData" value="${esc(f.data)}"></label>
       <button class="btn" id="btDiaProx" title="Próximo dia" style="transform:scaleX(-1)">${icone('voltar')}</button>
@@ -784,7 +795,7 @@ function paginaAmostras() {
       <button class="btn pri" id="btImprRet">${icone('impressora')} Imprimir retornos (A4)</button>
       <button class="btn pri" id="btImprA4">${icone('impressora')} Imprimir formulário A4</button>
     </div></div>
-    <div class="cartao"><h2>Corridas do dia<span class="cresce"></span><span class="mut" id="aResumo" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2><div class="tab-wrap" id="aTab"></div></div>
+    <div class="cartao livre"><h2>Corridas do dia<span class="cresce"></span><span class="mut" id="aResumo" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2><div class="tab-wrap" id="aTab"></div></div>
     <div id="aAvisos"></div>
     <div class="cartao"><h2>Etiquetas 10 × 5 cm (tamanho real)</h2><div class="corpo"><div class="prev-etq" id="aEtq"></div></div></div>
     <div class="cartao"><h2>Etiquetas dos retornos (meia folha A4, duas por folha)</h2><div class="corpo"><div class="prev-ret" id="aRetPrev"></div></div></div>
@@ -861,6 +872,7 @@ function editarDadosLab() {
       <h4 style="margin:16px 0 6px">Cabeçalho do formulário do laboratório</h4>
       <div class="linha-campos">${campo('formCodigo', 'Código')}${campo('formRevisao', 'Revisão')}${campo('formData', 'Data da revisão')}</div>
       <label class="campo" style="margin-top:10px">Rodapé${ent('id="p_rodape"', p.rodape)}</label>`,
+    soLeitura: !ED,
     botoes: [{ texto: 'Cancelar' }, { texto: 'Salvar', cls: 'pri', acao: el => {
       const novo = {};
       for (const k of Object.keys(PRINER_PADRAO)) { const i = el.querySelector('#p_' + k); if (i) novo[k] = i.value.trim(); }
@@ -897,10 +909,10 @@ function paginaRetornos() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Retornos</h1><p class="sub">Análise do laboratório e saldo de cada retorno. O saldo baixa sozinho quando uma corrida usa o retorno (inteiro ou só uma parte).</p></div>
-      <button class="btn pri" id="btNovoRet">${icone('mais')} Novo retorno</button>
+      <button class="btn pri so-ed" id="btNovoRet">${icone('mais')} Novo retorno</button>
     </div>
     <div class="kpis" id="kpis"></div>
-    <div class="cartao"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div class="cartao livre"><div class="corpo" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <div class="fichas" id="chips"></div>
       <select class="ent" id="fLiga" style="width:auto;min-width:150px">${optLigas(f.liga, 'Todas as ligas')}</select>
       <div class="busca">${icone('busca')}<input class="ent" id="fq" placeholder="Buscar código, liga ou relatório…" value="${esc(f.q)}"></div>
@@ -972,7 +984,7 @@ function editarRetorno(r) {
       ${+r.baixaPlanilha ? `<p class="mut">Baixa que já vinha da planilha (coluna "Utilizado"): <b>${fmtKg(r.baixaPlanilha)} kg</b>.</p>` : ''}
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0 6px">
         <h4 style="margin:0">Análise do laboratório (%)</h4>
-        <label class="btn peq pri" title="Lê o PDF do certificado de análise (Priner) e preenche a análise e o nº do relatório">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
+        <label class="btn peq pri so-ed" title="Lê o PDF do certificado de análise (Priner) e preenche a análise e o nº do relatório">${icone('subir')} Ler PDF do laboratório…<input type="file" id="arqLaudo" accept="application/pdf,.pdf" class="oculto"></label>
         <span class="mut" id="stLaudo" style="font-size:12.5px"></span>
         <span id="certsDoRet"></span>
       </div>
@@ -984,6 +996,7 @@ function editarRetorno(r) {
       ${!novo ? `<h4 style="margin:16px 0 6px">Uso nas corridas</h4>${s.usos.length ? `<table class="tab"><thead><tr><th>Corrida</th><th>Data</th><th class="dir">Solicitado (kg)</th><th class="dir">Recarga (kg)</th></tr></thead><tbody>
         ${s.usos.map(u => `<tr><td><a href="#/corrida/${encodeURIComponent(u.corridaId)}">${esc(u.numero)}</a></td><td>${fmtData(u.data)}</td><td class="dir num">${fmtKg(u.kg)}</td><td class="dir num">${u.recarga ? fmtKg(u.recarga) : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="mut">Ainda não usado em corridas do sistema.</p>'}
         <p><b>Saldo: ${fmtKg(s.saldo)} kg</b></p>` : ''}`,
+    soLeitura: !ED,
     botoes: [
       ...(!novo ? [{ texto: icone('lixo') + ' Excluir', cls: 'perigo', esquerda: true, acao: () => {
         if (usado) { aviso('Este retorno já foi usado em corridas; não dá para excluir.', 'erro'); return false; }
@@ -1051,7 +1064,7 @@ function paginaLigas() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Ligas e normas</h1><p class="sub">Faixa mínima e máxima de cada elemento (%). É a referência usada na corrida, no boletim e na conferência do laboratório.</p></div>
-      <button class="btn pri" id="btNovaLiga">${icone('mais')} Nova liga</button>
+      <button class="btn pri so-ed" id="btNovaLiga">${icone('mais')} Nova liga</button>
     </div>
     <div class="cartao"><div class="tab-wrap" id="tabela"></div></div>`;
   C.querySelector('#btNovaLiga').onclick = () => editarLiga(null);
@@ -1085,6 +1098,7 @@ function editarLiga(l) {
         <tr><td><b>Máx.</b></td>${ELEMENTOS.map(e => `<td>${entNum(`data-max="${e}"`, (l.faixas[e] || [])[1])}</td>`).join('')}</tr>
       </tbody></table></div>
       <p class="mut">Deixe em branco os elementos que a norma não controla.</p>`,
+    soLeitura: !ED,
     botoes: [
       ...(!nova ? [{ texto: icone('lixo') + ' Excluir', cls: 'perigo', esquerda: true, acao: () => {
         if (usada) { aviso('Esta liga tem corridas registradas; não dá para excluir.', 'erro'); return false; }
@@ -1120,7 +1134,7 @@ function paginaMateriais() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Sucatas e ferroligas</h1><p class="sub">Teor de cada elemento (%) usado no cálculo da carga, e o código da matéria-prima no NW (sai no boletim).</p></div>
-      <button class="btn pri" id="btNovoMat">${icone('mais')} Novo material</button>
+      <button class="btn pri so-ed" id="btNovoMat">${icone('mais')} Novo material</button>
     </div>
     <div class="cartao"><h2>Sucatas</h2><div class="tab-wrap" id="tabSuc"></div></div>
     <div class="cartao"><h2>Elementos de liga / ferroligas</h2><div class="tab-wrap" id="tabLig"></div></div>`;
@@ -1153,6 +1167,7 @@ function editarMaterial(m) {
       <h4 style="margin:16px 0 6px">Teores (%)</h4>
       <div class="tab-wrap"><table class="tab tab-comp"><thead><tr>${ELEMENTOS.map(e => `<th class="cen">${e}</th>`).join('')}</tr></thead>
         <tbody><tr>${ELEMENTOS.map(e => `<td>${entNum(`data-el="${e}"`, (m.teores || {})[e])}</td>`).join('')}</tr></tbody></table></div>`,
+    soLeitura: !ED,
     botoes: [
       ...(!novo ? [{ texto: icone('lixo') + ' Excluir', cls: 'perigo', esquerda: true, acao: () => {
         if (S.corridas.some(c => c.materiais && c.materiais[m.id])) { aviso('Material usado em corridas. Marque como inativo em vez de excluir.', 'erro'); return false; }
@@ -1190,20 +1205,20 @@ function paginaConfig() {
     <div class="cartao"><h2>Importar a planilha Calculo de Ligas</h2><div class="corpo">
       <p style="margin-top:0">Traz da planilha <b>.xlsm</b>: as normas das ligas, os retornos (com análise e saldo), o histórico de corridas (aba Banco de dados) e os contadores. Pode importar de novo quantas vezes precisar; o que veio da planilha é atualizado, o que foi criado no sistema não é apagado.</p>
       <p class="mut">Faça a importação final no dia em que pararem de usar a planilha, para os saldos baterem.</p>
-      <label class="btn">${icone('subir')} Escolher planilha…<input type="file" id="arqPlan" accept=".xlsm,.xlsx,.xls" class="oculto"></label>
+      <label class="btn so-ed">${icone('subir')} Escolher planilha…<input type="file" id="arqPlan" accept=".xlsm,.xlsx,.xls" class="oculto"></label>
       <span class="mut" id="statusImp" style="margin-left:10px"></span>
     </div></div>
     <div class="cartao"><h2>Importar a planilha Controle de Corrida</h2><div class="corpo">
       <p style="margin-top:0">Traz das abas <b>Controle Corrida AAAA</b> (2023, 2024…) o histórico de corridas: nº anual, liga, retorno, OP, kg dos materiais, <b>recarga</b>, nº do relatório e datas do laboratório.
         As corridas que já vieram da Calculo de Ligas (mesma data, nº e liga) só são completadas; as outras entram como histórico.</p>
       <p class="mut">Importe a Calculo de Ligas primeiro. Pode importar de novo quantas vezes precisar.</p>
-      <label class="btn">${icone('subir')} Escolher planilha…<input type="file" id="arqCtrl" accept=".xlsx,.xlsm,.xls" class="oculto"></label>
+      <label class="btn so-ed">${icone('subir')} Escolher planilha…<input type="file" id="arqCtrl" accept=".xlsx,.xlsm,.xls" class="oculto"></label>
       <span class="mut" id="statusCtrl" style="margin-left:10px"></span>
     </div></div>
     <div class="cartao"><h2>Cópia de segurança</h2><div class="corpo">
       <p style="margin-top:0">Baixa um arquivo com tudo do Cálculo de Liga (corridas, retornos, ligas, materiais e configurações). Guarde na rede de vez em quando.</p>
       <button class="btn" id="btExp">${icone('baixar')} Baixar cópia (.json)</button>
-      <label class="btn">${icone('subir')} Restaurar cópia…<input type="file" id="arqBkp" accept=".json" class="oculto"></label>
+      <label class="btn so-ed">${icone('subir')} Restaurar cópia…<input type="file" id="arqBkp" accept=".json" class="oculto"></label>
     </div></div>
     <div class="cartao"><h2>Banco de dados</h2><div class="corpo" id="boxBanco"></div></div>`;
 
@@ -1219,13 +1234,13 @@ function paginaConfig() {
     C.querySelector('#boxForno').innerHTML = `<div class="linha-campos">
         <label class="campo">Carga mínima (alerta) kg${entNum('id="fMin"', forno.min)}</label>
         <label class="campo">Carga máxima kg${entNum('id="fMax"', forno.max)}</label></div>
-      <button class="btn" style="margin-top:12px" id="btForno">${icone('salvar')} Salvar forno</button>`;
+      <button class="btn so-ed" style="margin-top:12px" id="btForno">${icone('salvar')} Salvar forno</button>`;
     C.querySelector('#boxCont').innerHTML = `<div class="linha-campos">
         <label class="campo">Última corrida anual${entNum('id="cAn"', ct.anual)}</label>
         <label class="campo">Última corrida do refratário${entNum('id="cRef"', ct.refratario)}</label></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-        <button class="btn" id="btCont">${icone('salvar')} Salvar numeração</button>
-        <button class="btn" id="btRefr" title="Zera o contador do refratário">${icone('chama')} Começar novo refratário</button></div>
+        <button class="btn so-ed" id="btCont">${icone('salvar')} Salvar numeração</button>
+        <button class="btn so-ed" id="btRefr" title="Zera o contador do refratário">${icone('chama')} Começar novo refratário</button></div>
       ${(c.campanhas || []).length ? `<p class="mut" style="margin-bottom:0">Refratários anteriores: ${c.campanhas.slice(-6).map(x => `${fmtData(x.fim)} (${x.corridas} corridas)`).join(' · ')}</p>` : ''}`;
     const s = banco.situacao();
     C.querySelector('#boxBanco').innerHTML = s.modo === 'local'

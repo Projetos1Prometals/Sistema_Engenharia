@@ -8,3 +8,6 @@ planilhas_dados/
 INSTRUÇÃO DE PROCESSO/
 # App antigo de certificados (só para estudo)
 certificado-analise-main/
+
+# App antigo dos Modelos de clientes (artifact do Claude): só para estudo
+app-modelos-clientes/

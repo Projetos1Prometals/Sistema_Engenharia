@@ -2,36 +2,122 @@
 //  comum/casca.js — barra lateral, topo, login obrigatório e ajudantes
 //  de tela (avisos, janelas, ícones, formatação) usados por todos os módulos.
 // =====================================================================
-import * as banco from './banco.js';
+import * as banco from './banco.js?v=1.7.1';
 
-export const VERSAO = '1.5.7';
+export const VERSAO = '1.7.1';
 
-// ---------- quem pode editar ----------
-// Só a Engenharia edita; os outros setores (almoxarifado, comercial…) só consultam.
-// Estas listas têm que ser as mesmas do firestore.rules (são as regras de lá que protegem de verdade).
-//   geral       → editor()            : Cálculo de Liga
-//   modelos     → dadosModelos()      : cadastro de modelos, posições, PDFs, ruas, importação
-//   manutencao  → manutencaoModelos() : só mandar para manutenção / registrar a volta
-//   certificados → editor()           : certificados de qualidade
-export const EDITORES = {
-  geral: ['projetos1@prometals.co', 'qualidade1@prometals.co'],
-  modelos: ['projetos1@prometals.co'],
-  manutencao: ['projetos1@prometals.co', 'qualidade1@prometals.co'],
-  certificados: ['projetos1@prometals.co', 'qualidade1@prometals.co'],   // → editor() no firestore.rules
-};
-// No modo local todo mundo edita. Para testar como outra pessoa vê, no console do navegador:
+// ---------- quem acessa o quê (tela Usuários e acessos) ----------
+// Cada usuário tem um documento em eng_acessos (id = e-mail em minúsculas):
+//   { email, nome, telas: { corridas: 'editar', retornos: 'ver', … } }   (tela fora da lista = sem acesso)
+// O administrador vê e edita tudo e é o único que mexe nos acessos. A proteção de verdade
+// está no firestore.rules (que lê o mesmo eng_acessos); aqui é só o que aparece na tela.
+export const ADMINS = ['projetos1@prometals.co'];          // → admin() no firestore.rules
+export const COL_ACESSOS = 'eng_acessos';
+// niveis: o que dá para escolher na tela de usuários
+export const TELAS = [
+  { id: 'corridas', grupo: 'Cálculo de Liga', nome: 'Corridas', niveis: ['ver', 'editar'], dica: 'Lista, ficha e boletim das corridas' },
+  { id: 'amostras', grupo: 'Cálculo de Liga', nome: 'Amostras do dia', niveis: ['ver', 'editar'], dica: 'Editar = mudar os Dados do formulário do laboratório' },
+  { id: 'retornos', grupo: 'Cálculo de Liga', nome: 'Retornos', niveis: ['ver', 'editar'], dica: 'Peso, análise e PDF do laboratório' },
+  { id: 'ligas', grupo: 'Cálculo de Liga', nome: 'Ligas e normas', niveis: ['ver', 'editar'] },
+  { id: 'materiais', grupo: 'Cálculo de Liga', nome: 'Sucatas e ferroligas', niveis: ['ver', 'editar'] },
+  { id: 'mapa', grupo: 'Almoxarifado Prometals', nome: 'Prateleiras', niveis: ['ver'], dica: 'Pôr modelo numa vaga segue o "Editar" de Modelos' },
+  { id: 'modelos', grupo: 'Almoxarifado Prometals', nome: 'Modelos', niveis: ['ver', 'editar'], dica: 'Cadastro, posição e PDF do desenho' },
+  { id: 'manutencao', grupo: 'Almoxarifado Prometals', nome: 'Manutenção de modelos', niveis: ['editar'], semMenu: true, dica: 'Só registrar a ida e a volta da manutenção' },
+  { id: 'comercial', grupo: 'Almoxarifado Prometals', nome: 'Lista comercial', niveis: ['ver'] },
+  { id: 'ruas', grupo: 'Almoxarifado Prometals', nome: 'Ruas e importação', niveis: ['ver', 'editar'] },
+  { id: 'modelosClientes', grupo: 'Modelos de clientes', nome: 'Modelos de clientes', niveis: ['ver', 'editar'], dica: 'Painel, modelos, devoluções, clientes, planilhas e configurações (todo o módulo)' },
+  { id: 'certificados', grupo: 'Qualidade', nome: 'Certificados', niveis: ['ver', 'editar'] },
+  { id: 'instrucao', grupo: 'Processo', nome: 'Instrução de Processo (atalho)', niveis: ['ver'], dica: 'Só o atalho no menu: o app fica no Supabase, com login próprio' },
+  { id: 'config', grupo: 'Sistema', nome: 'Configurações', niveis: ['ver', 'editar'], dica: 'Forno, numeração, importação das planilhas e cópia de segurança' },
+];
+export const TELAS_LIGA = ['corridas', 'amostras', 'retornos', 'ligas', 'materiais', 'config'];
+export const TELAS_MODELOS = ['mapa', 'modelos', 'comercial', 'ruas'];
+
+// Pedido do usuário: por enquanto TODOS que entram veem e editam tudo (menos Usuários e acessos).
+// Para passar a valer o que está em Usuários e acessos: mudar para true (e publicar o firestore.rules).
+export const RESTRINGIR = false;
+
+let ACESSO = null;   // { email, admin, telas }
+export const ehAdmin = () => !!(ACESSO && ACESSO.admin);
+export function nivel(tela) {
+  if (!ACESSO) return '';
+  if (ACESSO.admin) return 'editar';
+  if (!RESTRINGIR) { const t = TELAS.find(x => x.id === tela); return t ? t.niveis[t.niveis.length - 1] : ''; }
+  return ACESSO.telas[tela] || '';
+}
+export const podeVer = tela => !!nivel(tela);
+export const podeEditar = tela => nivel(tela) === 'editar';
+export const acessoCarregado = () => ACESSO;
+
+// No modo local todo mundo é administrador. Para testar como outra pessoa vê, no console do navegador:
 //   localStorage.setItem('pmt_simular', 'qualidade1@prometals.co')   (e remover depois)
-export function podeEditar(area = 'geral') {
+async function carregarAcesso() {
   let email;
   if (banco.modo() !== 'firebase') {
     email = localStorage.getItem('pmt_simular');
-    if (!email) return true;
+    if (!email) { ACESSO = { email: '', admin: true, telas: {} }; return; }
   } else {
     const u = banco.usuario();
     email = u && u.email;
   }
-  return !!email && (EDITORES[area] || []).includes(String(email).toLowerCase());
+  email = String(email || '').trim().toLowerCase();
+  if (ADMINS.includes(email)) { ACESSO = { email, admin: true, telas: {} }; await semearAcessos(); return; }
+  let doc = null;
+  try { doc = email ? await banco.lerDoc(COL_ACESSOS, email) : null; }
+  catch (e) { console.warn('acessos', e); }
+  ACESSO = { email, admin: false, telas: (doc && doc.telas) || {} };
 }
+
+// Acessos gravados sozinhos quando o administrador entra, para ninguém ficar sem acesso ao ligar esta tela.
+// Cada e-mail é gravado UMA vez só (a lista do que já foi gravado fica em eng_acessos/_semeados):
+// se o administrador depois remover ou mudar a pessoa, não volta.
+const ACESSOS_INICIAIS = [{
+  email: 'qualidade1@prometals.co', nome: 'Qualidade',
+  telas: { corridas: 'editar', amostras: 'editar', retornos: 'editar', ligas: 'editar', materiais: 'editar', config: 'editar',
+    mapa: 'ver', modelos: 'ver', manutencao: 'editar', comercial: 'ver', ruas: 'ver', certificados: 'editar', instrucao: 'ver' },
+}, {
+  email: 'comercial2@prometals.co', nome: 'Comercial',          // só o módulo Modelos de clientes
+  telas: { modelosClientes: 'editar' },
+}];
+async function semearAcessos() {
+  const chave = 'pmt_acessos_ok:' + ACESSOS_INICIAIS.length + ':' + (banco.modo() === 'firebase' ? 'fb' : 'local');
+  if (localStorage.getItem(chave)) return;
+  try {
+    const atuais = await banco.lerColecao(COL_ACESSOS);
+    const marca = atuais.find(a => a.id === '_semeados');
+    const feitos = new Set((marca && marca.lista) || []);
+    const ops = ACESSOS_INICIAIS.filter(a => !feitos.has(a.email))
+      .filter(a => !atuais.some(x => x.id === a.email))
+      .map(a => ({ col: COL_ACESSOS, id: a.email, dados: a }));
+    ACESSOS_INICIAIS.forEach(a => feitos.add(a.email));
+    ops.push({ col: COL_ACESSOS, id: '_semeados', dados: { lista: [...feitos] } });
+    await banco.emLote(ops);
+    localStorage.setItem(chave, '1');
+  } catch (e) { console.warn('semear acessos', e); }
+}
+
+// Tela sem acesso: mensagem no lugar do conteúdo
+export function semAcesso(el = document.getElementById('conteudo')) {
+  el.innerHTML = `<div class="faixa verm">${icone('cadeado')} Seu usuário não tem acesso a esta tela. Se precisar, peça para a Engenharia (${esc(ADMINS[0])}) liberar em <b>Usuários e acessos</b>.</div>
+    <a class="btn" href="${banco.raiz('index.html')}">${icone('voltar')} Visão geral</a>`;
+}
+
+// Tela só de consulta: os campos ficam travados e os botões de edição (classe "so-ed") somem.
+// Campos que não mudam dados (busca, filtros, data das amostras…) levam a classe "livre".
+export function modoLeitura(sim, texto = 'Você está só consultando esta tela. Alterações são feitas por quem tem acesso de edição.') {
+  const C = document.getElementById('conteudo');
+  if (!C) return;
+  C.classList.toggle('leitura', !!sim);
+  const f = document.getElementById('faixaLeitura');
+  if (f) { f.hidden = !sim; f.innerHTML = sim ? `${icone('olho')} ${esc(texto)}` : ''; }
+  if (sim) travarCampos(C);
+}
+function travarCampos(raiz) {
+  raiz.querySelectorAll('input,select,textarea').forEach(i => { if (!i.disabled && !i.closest('.livre')) i.disabled = true; });
+  raiz.querySelectorAll('[contenteditable="true"]').forEach(i => { i.contentEditable = 'false'; });
+}
+new MutationObserver(() => document.querySelectorAll('.leitura').forEach(travarCampos))
+  .observe(document.documentElement, { childList: true, subtree: true });
 
 // ---------- ícones (traço simples, estilo do PCP) ----------
 const P = {
@@ -65,6 +151,9 @@ const P = {
   olho: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   externo: '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   tubo: '<path d="M8 3h8"/><path d="M9 3v14a3 3 0 0 0 6 0V3"/><path d="M9 11h6"/>',
+  usuarios: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.8c2 .7 3.2 2.4 3.6 5.2"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  caminhao: '<path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
 };
 export function icone(nome, cls = '') {
   return `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[nome] || ''}</svg>`;
@@ -81,26 +170,51 @@ const MENU = [
     { id: 'ligas', nome: 'Ligas e normas', ic: 'frasco', href: 'liga/index.html#/ligas' },
     { id: 'materiais', nome: 'Sucatas e ferroligas', ic: 'caixas', href: 'liga/index.html#/materiais' },
   ] },
+  // Dois módulos; as telas de cada um aparecem embaixo do item quando se está nele
   { sec: 'Modelos', itens: [
-    { id: 'mapa', nome: 'Prateleiras', ic: 'grade', href: 'modelos/index.html#/mapa' },
-    { id: 'modelos', nome: 'Modelos', ic: 'cubo', href: 'modelos/index.html#/lista' },
-    { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
-    { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
+    { id: 'almox', nome: 'Almoxarifado Prometals', ic: 'grade', filhos: [
+      { id: 'mapa', nome: 'Prateleiras', ic: 'grade', href: 'modelos/index.html#/mapa' },
+      { id: 'modelos', nome: 'Modelos', ic: 'cubo', href: 'modelos/index.html#/lista' },
+      { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
+      { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
+    ] },
+    { id: 'mcli', nome: 'Modelos de clientes', ic: 'cubo', filhos: [
+      { id: 'mcli-painel', tela: 'modelosClientes', nome: 'Painel', ic: 'grade', href: 'modelos-clientes/index.html#/painel' },
+      { id: 'mcli-modelos', tela: 'modelosClientes', nome: 'Modelos', ic: 'cubo', href: 'modelos-clientes/index.html#/modelos' },
+      { id: 'mcli-devolucoes', tela: 'modelosClientes', nome: 'Devoluções', ic: 'documento', href: 'modelos-clientes/index.html#/devolucoes' },
+      { id: 'mcli-clientes', tela: 'modelosClientes', nome: 'Clientes', ic: 'usuarios', href: 'modelos-clientes/index.html#/clientes' },
+      { id: 'mcli-planilha', tela: 'modelosClientes', nome: 'Importar / Exportar', ic: 'subir', href: 'modelos-clientes/index.html#/planilha' },
+      { id: 'mcli-config', tela: 'modelosClientes', nome: 'Configurações', ic: 'engrenagem', href: 'modelos-clientes/index.html#/config' },
+    ] },
   ] },
   { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', href: 'certificados/index.html#/lista' }] },
   // Instrução de Processo: por enquanto é o app separado (Supabase), aberto numa aba nova
   { sec: 'Processo', itens: [{ id: 'instrucao', nome: 'Instrução de Processo', ic: 'prancheta', href: 'https://projetos1prometals.github.io/instrucao-processo-prometals/', externo: true }] },
-  { sec: 'Sistema', itens: [{ id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'liga/index.html#/config' }] },
+  { sec: 'Sistema', itens: [
+    { id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'liga/index.html#/config' },
+    { id: 'usuarios', nome: 'Usuários e acessos', ic: 'cadeado', href: 'usuarios/index.html', admin: true },
+  ] },
 ];
+// Item do menu aparece se a pessoa pode ver a tela (visão geral e atalhos externos: sempre).
+// Item com filhos (um módulo): aparece se algum filho aparece; os filhos só se abrem quando se está no módulo.
+const noMenu = it => it.filhos ? it.filhos.some(noMenu)
+  : it.admin ? ehAdmin() : (it.id === 'inicio' || podeVer(it.tela || it.id));
 
+function htmlItem(it, ativo, cls = '') {
+  return it.pronto === false
+    ? `<span class="item" title="Em migração para o sistema">${icone(it.ic)}${it.nome}${icone('cadeado', 'cad')}</span>`
+    : it.externo
+      ? `<a href="${it.href}" target="_blank" rel="noopener" data-menu="${it.id}" title="Abre o app numa aba nova">${icone(it.ic)}${it.nome}${icone("externo", "cad")}</a>`
+      : `<a href="${banco.raiz(it.href)}" data-menu="${it.id}" class="${cls} ${it.id === ativo ? "ativo" : ""}">${icone(it.ic)}${it.nome}</a>`;
+}
 function htmlMenu(ativo) {
-  return MENU.map(g => (g.sec ? `<div class="sec">${g.sec}</div>` : '') + g.itens.map(it =>
-    it.pronto === false
-      ? `<span class="item" title="Em migração para o sistema">${icone(it.ic)}${it.nome}${icone('cadeado', 'cad')}</span>`
-      : it.externo
-        ? `<a href="${it.href}" target="_blank" rel="noopener" data-menu="${it.id}" title="Abre o app numa aba nova">${icone(it.ic)}${it.nome}${icone("externo", "cad")}</a>`
-        : `<a href="${banco.raiz(it.href)}" data-menu="${it.id}" class="${it.id === ativo ? "ativo" : ""}">${icone(it.ic)}${it.nome}</a>`
-  ).join('')).join('');
+  return MENU.map(g => ({ ...g, itens: g.itens.filter(noMenu) })).filter(g => g.itens.length).map(g => (g.sec ? `<div class="sec">${g.sec}</div>` : '') + g.itens.map(it => {
+    if (!it.filhos) return htmlItem(it, ativo);
+    const filhos = it.filhos.filter(noMenu);
+    const aberto = it.id === ativo || filhos.some(f => f.id === ativo);
+    return htmlItem({ ...it, href: filhos[0].href }, null, 'pai' + (aberto ? ' aberto' : '')) +
+      (aberto ? `<div class="filhos">${filhos.map(f => htmlItem(f, ativo, 'filho')).join('')}</div>` : '');
+  }).join('')).join('');
 }
 
 // ---------- tema claro/escuro ----------
@@ -119,6 +233,7 @@ export async function montar({ ativo, trilha }) {
     location.replace(banco.raiz('index.html') + '?voltar=' + encodeURIComponent(location.href));
     return new Promise(() => {});
   }
+  await carregarAcesso();
   const miolo = document.getElementById('app');
   const casca = document.createElement('div');
   casca.className = 'casca';
@@ -134,9 +249,10 @@ export async function montar({ ativo, trilha }) {
         <div class="trilha" id="trilha"></div>
         <div class="cresce"></div>
         <button class="botao-ic" id="btTema" title="Trocar tema claro/escuro"></button>
-        <div class="quem"><span class="avatar" id="avatar"></span><div><b id="quemNome"></b><small>Engenharia</small></div></div>
+        <div class="quem"><span class="avatar" id="avatar"></span><div><b id="quemNome"></b><small>${ehAdmin() ? 'Administrador' : 'Engenharia'}</small></div></div>
         <button class="botao-ic" id="btSair" title="Sair">${icone('sair')}</button>
       </header>
+      <div class="faixa-leitura" id="faixaLeitura" hidden></div>
       <main class="conteudo" id="conteudo"></main>
       <footer class="rodape"><span id="rodSit"></span><span class="cresce" style="flex:1"></span><span id="rodSessao"></span></footer>
     </div>`;
@@ -201,10 +317,12 @@ export function aviso(texto, tipo = 'ok') {
 
 // ---------- janela (modal) ----------
 // Devolve {el, fechar}. botoes: [{texto, cls, acao(el) -> false mantém aberta}]
-export function janela({ titulo, html, botoes = [], larga = false, aoAbrir }) {
+// soLeitura: campos travados, botões de gravar somem e "Cancelar" vira "Fechar".
+export function janela({ titulo, html, botoes = [], larga = false, aoAbrir, soLeitura = false }) {
+  if (soLeitura) botoes = botoes.filter(b => !b.acao || b.livre).map(b => (b.texto === 'Cancelar' ? { ...b, texto: 'Fechar' } : b));
   const fundo = document.createElement('div');
   fundo.className = 'fundo-modal';
-  fundo.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="${larga ? 'max-width:1000px' : ''}">
+  fundo.innerHTML = `<div class="modal ${soLeitura ? 'leitura' : ''}" role="dialog" aria-modal="true" style="${larga ? 'max-width:1000px' : ''}">
     <header><h3>${esc(titulo)}</h3><button class="botao-ic" data-fechar aria-label="Fechar">${icone('fechar')}</button></header>
     <div class="corpo">${html}</div>
     <footer>${botoes.map((b, i) => b.esquerda ? `<button class="btn ${b.cls || ''}" data-b="${i}">${b.texto}</button><span class="cresce"></span>` : '').join('')}

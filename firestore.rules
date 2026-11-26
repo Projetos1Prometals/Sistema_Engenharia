@@ -3,55 +3,127 @@ rules_version = '2';
 // Regras do banco do Sistema Engenharia.
 // Firebase → Firestore Database → Regras → cole este texto → Publicar.
 //
-// As listas de e-mails têm que ser as mesmas de EDITORES em comum/casca.js.
-//   editor()            : edita o Cálculo de Liga
-//   dadosModelos()      : edita os modelos (cadastro, posições, PDFs, ruas, importação)
-//   manutencaoModelos() : só registra a ida e a volta da manutenção dos modelos
-//   leitor()            : só consulta (almoxarifado, comercial…). Para liberar alguém só para ver:
-//                         crie o usuário em Authentication e acrescente o e-mail na lista de leitor().
+// Quem acessa o quê fica na coleção eng_acessos (tela "Usuários e acessos" do sistema):
+//   eng_acessos/<e-mail em minúsculas> = { email, nome, telas: { corridas: 'editar', retornos: 'ver', … } }
+//   tela fora da lista = sem acesso.
+// O administrador (admin() abaixo = ADMINS em comum/casca.js) vê e edita tudo e é o único que muda os acessos.
+// Não é preciso mexer aqui para incluir ou tirar alguém: isso é feito na tela.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function logado(lista) {
-      return request.auth != null && request.auth.token.email in lista;
+    function logado() {
+      return request.auth != null && request.auth.token.email != null;
     }
-    function editor() {
-      return logado(['projetos1@prometals.co', 'qualidade1@prometals.co']);
+    function email() {
+      return request.auth.token.email.lower();
     }
-    function dadosModelos() {
-      return logado(['projetos1@prometals.co']);
+    function admin() {
+      return logado() && email() in ['projetos1@prometals.co'];
     }
-    function manutencaoModelos() {
-      return logado(['projetos1@prometals.co', 'qualidade1@prometals.co']);
+    function caminhoAcesso() {
+      return /databases/$(database)/documents/eng_acessos/$(email());
     }
-    function leitor() {
-      return editor() || dadosModelos() || manutencaoModelos() || logado([
-        // 'almoxarifado@prometals.co',
-        // 'comercial@prometals.co'
-      ]);
+    function telas() {
+      return get(caminhoAcesso()).data.get('telas', {});
+    }
+    // vê alguma das telas da lista?
+    function ve(lista) {
+      return admin() || (logado() && exists(caminhoAcesso()) && telas().keys().hasAny(lista));
+    }
+    // edita a tela?
+    function edita(tela) {
+      return admin() || (logado() && exists(caminhoAcesso()) && telas().get(tela, '') == 'editar');
+    }
+    function soMudou(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+    // Modelos de clientes: uma tela só para o módulo inteiro (comercial2@ e o administrador editam)
+    function leMcli() {
+      return ve(['modelosClientes']);
+    }
+    function editaMcli() {
+      return edita('modelosClientes');
     }
 
-    // Controle de Modelos
-    match /eng_modelos/{doc} {
-      allow read: if leitor();
-      allow write: if dadosModelos();
+    // ---------- Usuários e acessos ----------
+    match /eng_acessos/{id} {
+      allow read: if logado() && (id == email() || admin());
+      allow write: if admin();
+    }
+
+    // ---------- Cálculo de Liga (os Certificados também leem) ----------
+    function leLiga() {
+      return ve(['corridas', 'amostras', 'retornos', 'ligas', 'materiais', 'config', 'certificados']);
+    }
+    match /eng_corridas/{id} {
+      allow read: if leLiga();
+      allow write: if edita('corridas') || edita('config');
+    }
+    match /eng_retornos/{id} {
+      allow read: if leLiga();
+      // a corrida gera/atualiza o seu retorno ao ser salva
+      allow write: if edita('retornos') || edita('corridas') || edita('config');
+      // o certificado automático só marca no retorno qual certificado foi criado
+      allow update: if edita('certificados') && soMudou(['certificadoAuto', '_em', '_por']);
+    }
+    match /eng_ligas/{id} {
+      allow read: if leLiga();
+      allow write: if edita('ligas') || edita('config');
+    }
+    match /eng_materiais/{id} {
+      allow read: if leLiga();
+      allow write: if edita('materiais') || edita('config');
+    }
+    match /eng_config/{id} {
+      // "modelosClientes" = dados da empresa e texto da declaração do documento de devolução
+      allow read: if id == 'modelosClientes' ? leMcli() : leLiga();
+      // "certificado" = assinatura dos certificados; "liga" = forno, numeração, dados do formulário do laboratório
+      allow write: if id == 'modelosClientes' ? editaMcli()
+        : id == 'certificado' ? edita('certificados')
+        : (edita('corridas') || edita('amostras') || edita('config'));
+    }
+
+    // ---------- Certificados ----------
+    match /eng_certificados/{id} {
+      allow read: if ve(['certificados', 'corridas', 'retornos']);
+      allow write: if edita('certificados');
+    }
+
+    // ---------- Controle de Modelos ----------
+    function leModelos() {
+      return ve(['mapa', 'modelos', 'comercial', 'ruas']);
+    }
+    match /eng_modelos/{id} {
+      allow read: if leModelos();
+      allow write: if edita('modelos') || edita('ruas');
       // manutenção: só pode mudar a situação e o histórico de um modelo que já existe
-      allow update: if manutencaoModelos()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['situacao', 'historico', '_em', '_por']);
+      allow update: if edita('manutencao') && soMudou(['situacao', 'historico', '_em', '_por']);
     }
-    match /eng_ruas/{doc} {
-      allow read: if leitor();
-      allow write: if dadosModelos();
+    match /eng_ruas/{id} {
+      allow read: if leModelos();
+      allow write: if edita('ruas') || edita('modelos');
     }
-    match /eng_arquivos/{doc} {          // PDFs dos desenhos
-      allow read: if leitor();
-      allow write: if dadosModelos();
+    match /eng_arquivos/{id} {          // PDFs dos desenhos (modelo_…) e fotos dos modelos de clientes (mcli_…)
+      allow read: if id.matches('mcli_.*') ? leMcli() : leModelos();
+      allow write: if id.matches('mcli_.*') ? editaMcli() : edita('modelos');
     }
 
-    // Demais dados da Engenharia (Cálculo de Liga…): coleções que começam com "eng_"
-    match /{colecao}/{doc} {
-      allow read: if colecao.matches('eng_.*') && leitor();
-      allow write: if colecao.matches('eng_.*') && !(colecao in ['eng_modelos', 'eng_ruas', 'eng_arquivos']) && editor();
+    // ---------- Modelos de clientes (tela "modelosClientes") ----------
+    match /eng_clientes/{id} {
+      allow read: if leMcli();
+      allow write: if editaMcli();
+    }
+    match /eng_mcli_modelos/{id} {
+      allow read: if leMcli();
+      allow write: if editaMcli();
+    }
+    match /eng_mcli_eventos/{id} {
+      allow read: if leMcli();
+      allow write: if editaMcli();
+    }
+    match /eng_mcli_devolucoes/{id} {
+      allow read: if leMcli();
+      allow write: if editaMcli();
     }
   }
 }

@@ -3,8 +3,8 @@
 //  Telas: Prateleiras (mapa), Modelos (lista e ficha), Lista comercial,
 //  Ruas e importação. Só a Engenharia edita (podeEditar); os outros só consultam.
 // =====================================================================
-import * as banco from '../comum/banco.js';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmtData, icone, hoje, podeEditar, baixarArquivo } from '../comum/casca.js';
+import * as banco from '../comum/banco.js?v=1.7.1';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, TELAS_MODELOS, baixarArquivo } from '../comum/casca.js?v=1.7.1';
 import {
   COL, SITUACOES, EXTENSOES, CAMPOS_COMERCIAIS, normCodigo, idModelo, chaveDesenho, situacao, lerPosicao,
   posicoesDaRua, ocupacao, chaveDiametro, lerVolumes,
@@ -22,8 +22,7 @@ function recalcular() {
   S.ocup = ocupacao(S.modelos);
 }
 
-const est = await montar({ ativo: 'mapa', trilha: ['Controle de Modelos'] });
-ED = podeEditar('modelos');
+const est = await montar({ ativo: 'mapa', trilha: ['Almoxarifado Prometals'] });
 MAN = podeEditar('manutencao');
 const C = document.getElementById('conteudo');
 C.innerHTML = '<div class="vazio">Carregando dados…</div>';
@@ -33,13 +32,16 @@ function chegou(nome) {
   recalcular();
   if (S.chegou.modelos && S.chegou.ruas) { if (!pagina) rotear(); else pagina.atualizar(); }
 }
-banco.ouvirColecao(COL.modelos, l => { S.modelos = l; chegou('modelos'); }, erroBanco);
-banco.ouvirColecao(COL.ruas, l => { S.ruas = l.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || String(a.letra).localeCompare(b.letra)); chegou('ruas'); }, erroBanco);
+if (!TELAS_MODELOS.some(podeVer)) semAcesso(C);   // nenhuma tela de Modelos liberada: nem lê os dados
+else {
+  banco.ouvirColecao(COL.modelos, l => { S.modelos = l; chegou('modelos'); }, erroBanco);
+  banco.ouvirColecao(COL.ruas, l => { S.ruas = l.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || String(a.letra).localeCompare(b.letra)); chegou('ruas'); }, erroBanco);
+}
 
 function erroBanco(e) {
   const permissao = e && /permission/i.test(e.code || e.message || '');
   C.innerHTML = `<div class="faixa verm">${permissao
-    ? 'Seu usuário não tem permissão para ver os modelos. Peça para a Engenharia incluir seu e-mail nas Regras do Firestore.'
+    ? 'Seu usuário não tem permissão para ver os modelos. Peça para a Engenharia liberar em Usuários e acessos.'
     : 'Erro ao ler o banco de dados: ' + esc(e && (e.message || e.code))}</div>`;
 }
 
@@ -59,6 +61,11 @@ function rotear() {
   const h = caminho.split('/');
   hashAtual = location.hash || '#/mapa';
   window.scrollTo(0, 0);
+  // tela de cada rota (Usuários e acessos). A ficha do modelo abre para quem vê qualquer tela de Modelos;
+  // editar segue "Modelos" (também pôr modelo numa vaga nas Prateleiras); Ruas e importação tem o seu.
+  const tela = { lista: 'modelos', comercial: 'comercial', ruas: 'ruas', modelo: 'modelos' }[h[0]] || 'mapa';
+  ED = podeEditar(tela === 'ruas' ? 'ruas' : 'modelos') && tela !== 'comercial';
+  if (h[0] === 'modelo' ? !TELAS_MODELOS.some(podeVer) : !podeVer(tela)) { pagina = { atualizar() {} }; marcarMenu(tela); return semAcesso(C); }
   if (h[0] === 'modelo') return paginaModelo(decodeURIComponent(h[1] || 'novo'), new URLSearchParams(busca || ''));
   if (h[0] === 'lista') return paginaLista();
   if (h[0] === 'comercial') return paginaComercial();
@@ -83,7 +90,7 @@ const somenteLeitura = () => ED ? '' : `<div class="faixa">${icone('olho')} ${MA
 // =====================================================================
 function paginaMapa() {
   marcarMenu('mapa');
-  definirTrilha(['Controle de Modelos', 'Prateleiras']);
+  definirTrilha(['Almoxarifado Prometals', 'Prateleiras']);
   const f = filtros.mapa;
   C.innerHTML = `
     <div class="cab">
@@ -174,7 +181,7 @@ function gravarModelo(m) {
 // =====================================================================
 function paginaLista() {
   marcarMenu('modelos');
-  definirTrilha(['Controle de Modelos', 'Modelos']);
+  definirTrilha(['Almoxarifado Prometals', 'Modelos']);
   const f = filtros.lista;
   C.innerHTML = `
     <div class="cab">
@@ -237,7 +244,7 @@ function paginaModelo(id, params) {
   if (!orig && !ED) { location.hash = '#/lista'; return; }
   const d = orig ? JSON.parse(JSON.stringify(semMeta(orig))) : { codigo: '', descricao: '', volumes: '', posicao: lerPosicao(params.get('pos')) ? lerPosicao(params.get('pos')).pos : '', situacao: 'disponivel', obs: '', comercial: null, historico: [] };
   d.comercial = d.comercial || {};
-  definirTrilha(['Controle de Modelos', 'Modelos', orig ? orig.codigo : 'Novo modelo']);
+  definirTrilha(['Almoxarifado Prometals', 'Modelos', orig ? orig.codigo : 'Novo modelo']);
 
   C.innerHTML = `<div id="pgModelo">
     <div class="cab">
@@ -436,7 +443,7 @@ async function abrirDesenho(m, baixar) {
 // =====================================================================
 function paginaComercial() {
   marcarMenu('comercial');
-  definirTrilha(['Controle de Modelos', 'Lista comercial']);
+  definirTrilha(['Almoxarifado Prometals', 'Lista comercial']);
   const f = filtros.comercial;
   C.innerHTML = `
     <div class="cab"><div class="cresce"><h1 class="titulo">Lista comercial — refinadores</h1><p class="sub">Dados técnicos e situação no estoque (atualiza sozinha pelas prateleiras). Clique no PDF para ver o desenho.</p></div></div>
@@ -490,7 +497,7 @@ function paginaComercial() {
 // =====================================================================
 function paginaRuas() {
   marcarMenu('ruas');
-  definirTrilha(['Controle de Modelos', 'Ruas e importação']);
+  definirTrilha(['Almoxarifado Prometals', 'Ruas e importação']);
   C.innerHTML = `
     <div class="cab"><div class="cresce"><h1 class="titulo">Ruas e importação</h1><p class="sub">As ruas do almoxarifado, quantas posições cada uma tem, e a importação da planilha.</p></div>
       ${ED ? `<button class="btn pri" id="btNovaRua">${icone('mais')} Nova rua</button>` : ''}</div>

@@ -6,8 +6,8 @@
 //  (corrida, material, OP da liga e análise do laboratório já preenchidos)
 //  e a conferência usa as normas de "Ligas e normas".
 // =====================================================================
-import * as banco from '../comum/banco.js';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, baixarArquivo } from '../comum/casca.js';
+import * as banco from '../comum/banco.js?v=1.7.1';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, podeEditar, podeVer, semAcesso, baixarArquivo } from '../comum/casca.js?v=1.7.1';
 import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../liga/calculo.js?v=1.5.1';
 import { lerLaudoOuAvisar } from '../liga/laudo.js?v=1.5.6';
 import { criarCertificadosAuto, criarCertificadosDe, retornosSemCertificado, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=1.5.7';
@@ -73,12 +73,15 @@ function escolherRetornosSemCert() {
     } }],
   });
 }
-const erro = e => { C.innerHTML = `<div class="faixa verm">${e && /permission/i.test(e.code || e.message || '') ? 'Seu usuário não tem permissão para ver os certificados.' : 'Erro ao ler o banco: ' + esc(e && (e.message || e.code))}</div>`; };
-banco.ouvirColecao(COL.certs, l => { S.certs = l.map(upgradeCert); chegou('certs'); }, erro);
-banco.ouvirColecao(COL_LIGA.corridas, l => { S.corridas = l; chegou('corridas'); }, erro);
-banco.ouvirColecao(COL_LIGA.ligas, l => { S.ligas = l; chegou('ligas'); }, erro);
-banco.ouvirColecao(COL_LIGA.retornos, l => { S.retornos = l; chegou('retornos'); }, erro);
-banco.ouvirDoc(COL_LIGA.config, CFG_ID, d => { S.cfg = d || {}; chegou('cfg'); }, erro);
+const erro = e => { C.innerHTML = `<div class="faixa verm">${e && /permission/i.test(e.code || e.message || '') ? 'Seu usuário não tem permissão para ver os certificados. Peça para a Engenharia liberar em Usuários e acessos.' : 'Erro ao ler o banco: ' + esc(e && (e.message || e.code))}</div>`; };
+if (!podeVer('certificados')) semAcesso(C);   // sem acesso aos Certificados: nem lê os dados
+else {
+  banco.ouvirColecao(COL.certs, l => { S.certs = l.map(upgradeCert); chegou('certs'); }, erro);
+  banco.ouvirColecao(COL_LIGA.corridas, l => { S.corridas = l; chegou('corridas'); }, erro);
+  banco.ouvirColecao(COL_LIGA.ligas, l => { S.ligas = l; chegou('ligas'); }, erro);
+  banco.ouvirColecao(COL_LIGA.retornos, l => { S.retornos = l; chegou('retornos'); }, erro);
+  banco.ouvirDoc(COL_LIGA.config, CFG_ID, d => { S.cfg = d || {}; chegou('cfg'); }, erro);
+}
 const assinatura = () => (S.cfg && S.cfg.assinatura) || '';
 
 // ---------------------------------------------------------------------

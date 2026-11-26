@@ -77,7 +77,8 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - As planilhas ficam em `planilhas_dados/`, que está no `.gitignore`: o repositório é público,
   **nunca** enviar planilhas para o GitHub.
 
-## Controle de Modelos (`modelos/`)
+## Almoxarifado Prometals (`modelos/`) — modelos da própria Prometals
+- No menu, seção Modelos: item "Almoxarifado Prometals" (as 4 telas abrem embaixo dele quando se está no módulo).
 - `regras.js` (sem tela), `modelos.js` (telas), `importar.js` (planilha Almoxarifado_Modelos), `modelos.css`.
 - Coleções: `eng_modelos` (id = código normalizado por `idModelo()`), `eng_ruas` (id = letra).
 - **Código não pode repetir** (o id sai do código; maiúsculas/espaços não contam). Na importação, o
@@ -86,14 +87,35 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   fora do estoque sem posição. Botões Manutenção / Voltou gravam no `historico` (só a data, sem destino).
 - **PDF do desenho** por código: `banco.salvarArquivo('modelo_<id>')`. No Firebase vai em pedaços na
   coleção `eng_arquivos` (o Storage exige plano pago); no modo local, IndexedDB. Máx. 20 MB.
-- **Quem edita** (`podeEditar(area)` / `EDITORES` em `comum/casca.js` + funções do `firestore.rules`;
-  as listas têm que bater):
-  - `modelos` / `dadosModelos()`: só **projetos1@** — cadastro, posições, PDFs, ruas, importação.
-  - `manutencao` / `manutencaoModelos()`: **projetos1@ e qualidade1@** — só ida/volta da manutenção.
-    No Firestore, a qualidade só grava se a mudança tocar apenas `situacao`, `historico`, `_em`, `_por`.
-  - `geral` / `editor()`: Cálculo de Liga (projetos1@ e qualidade1@).
-  - `leitor()`: os outros setores, só consulta.
-  - Para testar no modo local como outra pessoa: `localStorage.setItem('pmt_simular', '<email>')`.
+- **Quem edita**: tela Usuários e acessos (ver a seção no fim). Em `modelos.js`, `ED` muda por rota: Prateleiras,
+  Modelos e a ficha seguem `modelos`; Ruas e importação segue `ruas`; Lista comercial é só ver. `MAN` = `manutencao`
+  (no Firestore, só grava se a mudança tocar apenas `situacao`, `historico`, `_em`, `_por`).
+
+## Modelos de clientes (`modelos-clientes/`) — modelos que os clientes deixam na empresa
+- Porte do app antigo (artifact do Claude, `app-modelos-clientes/`, no `.gitignore`, só estudo). Mesmas telas e regras:
+  Painel, Modelos (+ ficha `#/modelo/<id>`), Devoluções (+ `#/devolucao/<id>`), Clientes, Importar / Exportar, Configurações.
+  Os dados do app antigo eram de teste: **não** foram migrados.
+- `mcli.js` (telas), `folha.js` (documento de devolução A4 — layout do app antigo, não mudar sem pedido), `fotos.js`,
+  `planilha.js` (ler Excel/CSV/colado, montar .xlsx), `mcli.css` (inclui a impressão), `logo-doc.jpg` (logo do documento).
+- Coleções: `eng_clientes`, `eng_mcli_modelos`, `eng_mcli_eventos`, `eng_mcli_devolucoes`; config (dados da T.M Gastão,
+  texto da declaração, prefixos) em `eng_config/modelosClientes`. Ids aleatórios; códigos `MOD-0001` / `DEV-0001`
+  (`proximoCodigo()`, prefixo da config). Código do modelo não repete.
+- Situações: `na_empresa`, `em_conserto`, `separado` (Aguardando retirada), `devolvido`. Histórico (`tipo`): `entrada`
+  (chegada), `conserto` (aberto/concluído; aberto → Em conserto), `ocorrencia`, `movimentacao` (Local / situação),
+  `saida` (devolução). Devolução: `emitida` → `entregue` (Registrar retirada: modelos viram Devolvido + evento `saida`)
+  ou `cancelada` (modelos voltam para Na empresa; só a cancelada pode ser excluída).
+- **Documento de devolução**: impresso pelo navegador (Ctrl+P ou "Imprimir / PDF" na página da devolução), como o boletim.
+  O CSS de impressão esconde tudo de `#conteudo` menos `.folha-wrap`. Campos da retirada em branco saem como linha.
+- **Fotos** do modelo: `fotos: [{id, tipo}]`, tipo `frente` / `traseira` / `macho` (opcional) / `outra`. Reduzidas no
+  navegador (~1280 px, ~150 KB JPEG, `reduzir()`) e gravadas com `banco.salvarArquivo('mcli_…')` (no Firebase em pedaços
+  em `eng_arquivos`; local: IndexedDB). Eventos e devolução guardam só os ids. Ao remover, o arquivo só é apagado se
+  nenhum documento de devolução usar a foto (`apagarFotos()`).
+- **Código do produto** (`codProduto`, o mesmo do NW e da Instrução de Processo) e a página de consulta
+  **`#/produto/<código>`** (descrição, referência/desenho, cliente, liga, partes, material, localização, situação, fotos
+  frente/traseira/macho). A Instrução de Processo vai abrir
+  `…/modelos-clientes/index.html#/produto/<código>` (quem abre precisa de login e de "Modelos de clientes" ao menos "Só ver").
+- Permissão: **uma tela só**, `modelosClientes` (ver/editar), para o módulo inteiro. Regras: `leMcli()` / `editaMcli()`.
+  comercial2@ (e o admin) editam: `semearAcessos()` grava o comercial2@ com só `modelosClientes: 'editar'`.
 
 ## Certificados (`certificados/`)
 - `folha.js` (a folha A4 — layout copiado do app antigo / planilha, 12 colunas; não mudar sem pedido),
@@ -124,16 +146,48 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   que também aparecem no resultado do laboratório da corrida.
 - Importa o backup .json do app antigo (`{sistema:'certificados-prometals', certs, assinatura}`) e liga
   sozinho à corrida pelo texto "33-229" (refratário-anual, data mais próxima, até 120 dias).
-- Quem edita: `EDITORES.certificados` (= `editor()` no firestore.rules).
+- Quem edita: tela `certificados` em Usuários e acessos.
 
 ## Instrução de Processo
-- Fica no **Supabase** (app separado); no menu é só um atalho externo. Decisão do usuário, para sobrar
-  espaço no Firebase. As pastas `INSTRUÇÃO DE PROCESSO/` e `certificado-analise-main/` são cópias dos
+- Fica no **Supabase** (app separado); no menu é só um atalho externo (tela `instrucao`, só "ver", em Usuários e
+  acessos: quem não tem não vê o atalho). Decisão do usuário, para sobrar espaço no Firebase. As pastas `INSTRUÇÃO DE PROCESSO/` e `certificado-analise-main/` são cópias dos
   apps antigos só para estudo (estão no `.gitignore`).
 
 ## Testes
 Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servidor HTTP simples
 (ex.: `HttpListener` em PowerShell) e usa-se o Chrome headless (`--dump-dom`, `--print-to-pdf`).
+Com `--virtual-time-budget` o IndexedDB (fotos, PDFs no modo local) **trava**: para isso, abrir o Chrome com
+`--remote-debugging-port` e ler/printar pela DevTools (WebSocket em PowerShell), em tempo real.
 
 ## GitHub
 Perguntar ao usuário antes de enviar qualquer coisa para o GitHub.
+
+## Usuários e acessos (`usuarios/`, `comum/casca.js`, `firestore.rules`)
+- **Por enquanto desligado** (pedido do usuário, 2026-11-26): `RESTRINGIR = false` em `casca.js` → todo não-admin
+  vê e edita tudo (nível máximo de cada tela), menos Usuários e acessos; no Firebase vale o `firestore-todos.rules`
+  (quem tem doc em `eng_acessos` lê/grava todas as `eng_*`). Para restringir: `RESTRINGIR = true` + publicar o `firestore.rules`.
+- Pedido do usuário: controlar por **tela** quem vê e quem edita. Coleção `eng_acessos`, id = e-mail em minúsculas:
+  `{ email, nome, telas: { corridas: 'editar', retornos: 'ver', … } }` (tela fora da lista = sem acesso).
+- Telas = `TELAS` em `casca.js` (corridas, amostras, retornos, ligas, materiais, mapa, modelos, manutencao, comercial, ruas,
+  modelosClientes, certificados, instrucao, config); `niveis` diz o que cada uma aceita (mapa, comercial e instrucao só
+  "ver"; manutencao só "editar").
+- Menu (`MENU` em `casca.js`): item com `filhos` = um módulo (Almoxarifado Prometals, Modelos de clientes); os filhos só
+  aparecem embaixo quando se está no módulo (`ativo`/`marcarMenu`). Filho com `tela:` usa essa permissão em vez do `id`.
+- Administrador = `ADMINS` em `casca.js` = `admin()` no `firestore.rules` (projetos1@): vê e edita tudo e é o único
+  que abre Usuários e acessos. Quando ele entra, `semearAcessos()` grava cada pessoa de `ACESSOS_INICIAIS` (qualidade1@,
+  comercial2@) **uma vez só**: a lista do que já foi gravado fica em `eng_acessos/_semeados` (se o admin depois remover
+  ou mudar a pessoa, não volta). Pessoa nova que precise nascer pronta → acrescentar em `ACESSOS_INICIAIS`.
+- `montar()` carrega o acesso antes de desenhar o menu. Use `podeVer(tela)` / `podeEditar(tela)` / `ehAdmin()`.
+  Menu e Visão geral só mostram o que a pessoa vê; rota sem acesso → `semAcesso()`; módulo sem nenhuma tela liberada
+  nem liga os `ouvirColecao`.
+- **Só ver** no Cálculo de Liga: `modoLeitura(true)` põe `.leitura` no conteúdo + faixa azul; um MutationObserver trava
+  todo input/select/textarea dentro de `.leitura` que não esteja dentro de `.livre` (busca, filtros, data das amostras),
+  e o CSS esconde `.so-ed` (botões de gravar). Janelas: `janela({ soLeitura: !ED })` (some botão com `acao`, Cancelar vira Fechar).
+  Botão novo que grava → classe `so-ed`; campo novo de filtro em tela de lista → dentro de `.livre`.
+- `firestore.rules`: `ve([telas])` para ler, `edita(tela)` para gravar, lendo `eng_acessos/<e-mail>`. Quem grava em cada
+  coleção: ver os comentários do arquivo (ex.: corrida grava o retorno e `eng_config/liga`; certificado só marca
+  `certificadoAuto` no retorno). Mudou o arquivo → o usuário tem que colar no Firebase e publicar.
+- `banco.criarLogin()` cria o login de outra pessoa numa 2ª instância do Firebase (não derruba a sessão do admin).
+- Teste no modo local como outra pessoa: `localStorage.setItem('pmt_simular', '<email>')` + o doc em `pmt_local:eng_acessos`.
+- `casca.js` e `banco.js` são importados com `?v=` (todos os módulos com a **mesma** versão, senão viram duas cópias
+  e o acesso carregado não é compartilhado). Ao mudá-los, suba o `?v=` em todos os imports.

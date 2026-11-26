@@ -7,7 +7,8 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 | Módulo | Situação |
 |---|---|
 | **Cálculo de Liga** (corridas, retornos, ligas, sucatas e ferroligas) | Pronto (etapa 1) |
-| **Controle de Modelos** (prateleiras, manutenção, histórico, desenho em PDF, lista comercial) | Pronto |
+| **Almoxarifado Prometals** (modelos da Prometals: prateleiras, manutenção, histórico, desenho em PDF, lista comercial) | Pronto |
+| **Modelos de clientes** (chegada com NF, fotos, consertos, documento de devolução, consulta por código do produto) | Pronto |
 | **Certificados** de qualidade (busca por OP, edição na folha, análise vinda da corrida, impressão A4) | Pronto |
 | Instrução de Processo | App separado (Supabase), atalho no menu |
 
@@ -17,11 +18,12 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 |---|---|
 | `index.html` | Entrada: login e visão geral |
 | `config.js` | **Configuração do Firebase**: o único arquivo que precisa ser editado |
-| `firestore.rules` | Regras de segurança + lista de e-mails liberados (colar no Firebase) |
+| `firestore.rules` | Regras de segurança (colar no Firebase). Leem os acessos da tela **Usuários e acessos** |
+| `usuarios/` | Tela **Usuários e acessos** (só o administrador): quem vê e quem edita cada tela |
 | `comum/` | Partes usadas por todos os módulos: visual (`tema.css`), menu (`casca.js`), banco de dados (`banco.js`), logo |
 | `liga/` | Módulo Cálculo de Liga: tela (`index.html`, `liga.css`, `liga.js`), contas (`calculo.js`), importação da planilha (`importar.js`), dados iniciais (`dados-iniciais.js`) |
-| `modelos/` | Módulo Controle de Modelos: telas (`index.html`, `modelos.css`, `modelos.js`), regras (`regras.js`), importação da planilha Almoxarifado_Modelos (`importar.js`) |
-
+| `modelos/` | Módulo Almoxarifado Prometals: telas (`index.html`, `modelos.css`, `modelos.js`), regras (`regras.js`), importação da planilha Almoxarifado_Modelos (`importar.js`) |
+| `modelos-clientes/` | Módulo Modelos de clientes: telas (`mcli.js`, `mcli.css`), documento de devolução (`folha.js`, `logo-doc.jpg`), fotos (`fotos.js`), planilhas (`planilha.js`) |
 | `certificados/` | Módulo Certificados: folha A4 (`folha.js`), telas (`index.html`, `certificados.css`, `certificados.js`) |
 
 ## 1. Colocar no GitHub
@@ -75,9 +77,13 @@ Traz o histórico das abas **Controle Corrida 2023, 2024…**: nº anual, recarg
 - **Retorno da corrida**: ao salvar a corrida, o sistema cria sozinho o retorno dela (ex.: `64-257-CRK`), sem peso. Quando o PDF do laboratório chegar, abra o retorno em **Retornos** e clique em **Ler PDF do laboratório**: a análise fica no retorno e aparece na corrida e no certificado. Pese e informe o kg na tela **Retornos** (filtro "Sem peso") ou no botão **Atualizar retorno** da corrida.
 - **Ligação futura com o PCP**: cada corrida guarda a **FS** e as **OPs**; nas próximas etapas, a Instrução de Processo vai usar o **código do produto**.
 
-## Incluir uma pessoa nova
-1. Firebase → **Authentication → Usuários → Adicionar usuário**.
-2. **Firestore Database → Regras**: acrescente o e-mail na lista → **Publicar**.
+## Usuários e acessos (quem vê e quem edita)
+Menu **Sistema → Usuários e acessos** (só aparece para o administrador, projetos1@):
+- Para cada pessoa e cada tela do menu: **Sem acesso** (a tela some do menu), **Só ver** (consulta e imprime, campos travados) ou **Editar**.
+- **Novo usuário**: e-mail, nome, acessos iniciais (só ver tudo, nada, ou igual a outra pessoa) e, se quiser, já cria o login (senha provisória; em branco, a pessoa recebe um e-mail para criar a senha).
+- Clicando no nome da pessoa: só ver em tudo, editar em tudo, tirar tudo, e-mail para trocar a senha, remover.
+- Vale na hora (a pessoa aperta F5). Quem não está na lista não acessa nada. O atalho da Instrução de Processo também é uma linha da tabela (só aparece para quem tem "Só ver").
+- O bloqueio vale também no banco, pelas **Regras** do Firestore (`firestore.rules`, que leem a mesma lista). Só é preciso colar as regras de novo quando o arquivo mudar.
 
 ## Cópia de segurança
 **Configurações → Baixar cópia (.json)**. Guarde na rede de vez em quando. Para voltar uma cópia: **Restaurar cópia…**
@@ -88,7 +94,7 @@ Dá para continuar trabalhando. O rodapé avisa, e as alterações são enviadas
 ## Custos
 O plano gratuito do Firebase (Spark) cobre a Engenharia com folga: 1 GB de dados, 50 mil leituras e 20 mil gravações por dia.
 
-## Como funciona o Controle de Modelos
+## Como funciona o Almoxarifado Prometals
 
 - **Prateleiras**: o mapa de cada rua, desenhado sozinho. Verde = disponível, laranja = em manutenção, azul = vaga livre. Clique numa posição para abrir o modelo ou, numa vaga livre, colocar um modelo.
 - **Modelos**: cada modelo tem um **código único** — o sistema não deixa cadastrar código repetido (nem com maiúscula/minúscula diferente). Cada posição guarda um modelo só.
@@ -96,7 +102,19 @@ O plano gratuito do Firebase (Spark) cobre a Engenharia com folga: 1 GB de dados
 - **Desenho (PDF)**: na ficha do modelo, **Enviar o PDF do desenho** (até 20 MB). Quem consulta abre ou baixa o PDF pela ficha ou pela **Lista comercial**. Os PDFs ficam no banco do Firebase (não vão para o GitHub).
 - **Lista comercial**: a aba Comercial da planilha — diâmetro, variação, refinador, área, setores… com a situação no estoque atualizada sozinha.
 - **Importar a planilha**: **Ruas e importação → Escolher planilha…** → `Almoxarifado_Modelos.xlsx`. Código repetido na planilha não entra (aparece no aviso).
-- **Quem edita**: só a Engenharia (lista `EDITORES` em `comum/casca.js` e `editor()` no `firestore.rules`). Para alguém **só consultar**, crie o usuário no Firebase e coloque o e-mail na lista `leitor()` do `firestore.rules`.
+- **Quem edita**: definido na tela **Usuários e acessos** (por tela: sem acesso, só ver ou editar).
+
+## Como funcionam os Modelos de clientes
+
+Os modelos que os clientes deixam na empresa (menu **Modelos → Modelos de clientes**). Quem edita: comercial2@ e a Engenharia (tela **Modelos de clientes** em Usuários e acessos).
+- **Painel**: quantos estão na empresa, em conserto, aguardando retirada, devolvidos e parados há mais de 1 ano; consertos em aberto, documentos aguardando retirada e as últimas movimentações.
+- **Registrar chegada**: cliente, código interno (sai sozinho: `MOD-0001`, `MOD-0002`…), **código do produto** (o mesmo do NW e da Instrução de Processo), descrição, referência/desenho, partes, material, liga, localização, NF de entrada e as **fotos** (Frente, Traseira, Macho — opcional — e Outras). As fotos são reduzidas sozinhas (~150 KB cada). "Salvar e cadastrar outro da mesma NF" já abre o próximo com o mesmo cliente e NF.
+- **Ficha do modelo**: + Conserto (em aberto / concluído), + Ocorrência, + Nova chegada, Local / situação, **Devolver ao cliente**, fotos por tipo e o histórico.
+- **Devoluções**: escolha o cliente, marque os modelos e as fotos que vão no documento → **Emitir documento** (`DEV-0001`…). Na página da devolução, **Imprimir / PDF** (ou Ctrl+P) imprime o documento A4 para o cliente assinar. **Registrar retirada** (nome, CPF, RG, veículo, placa) passa os modelos para "Devolvido"; registrada antes de imprimir, a declaração já sai preenchida.
+- **Clientes**: dados que saem no "ID Cliente" do documento.
+- **Importar / Exportar**: modelos e clientes por planilha (Excel, CSV ou colando do Excel) e a planilha completa (.xlsx) ou a cópia (.json).
+- **Configurações**: dados da T.M Gastão (cabeçalho do documento), emissor padrão e o texto da declaração.
+- **Consulta por código do produto**: `…/modelos-clientes/index.html#/produto/<código>` mostra a peça (descrição, desenho, cliente, liga, partes, material, localização, situação) e as fotos frente/traseira/macho. A Instrução de Processo vai abrir esta página.
 
 ## Como funcionam os Certificados
 

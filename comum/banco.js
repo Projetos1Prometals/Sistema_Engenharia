@@ -111,6 +111,24 @@ export async function redefinirSenha(email) {
   if (estado.modo !== 'firebase') return;
   await estado.authM.sendPasswordResetEmail(estado.auth, email.trim());
 }
+// Cria o login (e-mail/senha) de outra pessoa sem sair da conta atual: usa uma segunda
+// instância do Firebase só para o cadastro. Devolve 'criado' ou 'existia'.
+export async function criarLogin(email, senha) {
+  await iniciar();
+  if (estado.modo !== 'firebase') return 'local';
+  const appM = await import(FB + 'firebase-app.js');
+  const app2 = appM.getApps().find(a => a.name === 'cadastro') || appM.initializeApp(estado.cfg, 'cadastro');
+  const auth2 = estado.authM.getAuth(app2);
+  try {
+    await estado.authM.createUserWithEmailAndPassword(auth2, email.trim(), senha);
+    return 'criado';
+  } catch (e) {
+    if (/email-already-in-use/.test(e.code || '')) return 'existia';
+    throw e;
+  } finally {
+    await estado.authM.signOut(auth2).catch(() => {});
+  }
+}
 export function mensagemErroLogin(e) {
   const c = (e && e.code) || '';
   if (/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c)) return 'E-mail ou senha incorretos.';
@@ -201,6 +219,17 @@ export async function lerColecao(col) {
   const { fsM, db } = estado;
   const snap = await fsM.getDocs(fsM.collection(db, col));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Lê um documento uma vez (null se não existir).
+export async function lerDoc(col, id) {
+  if (estado.modo === 'local') {
+    const obj = lerLocal(col);
+    return obj[id] ? { id, ...obj[id] } : null;
+  }
+  const { fsM, db } = estado;
+  const d = await fsM.getDoc(fsM.doc(db, col, id));
+  return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
 // Grava o documento inteiro (substitui o que havia).

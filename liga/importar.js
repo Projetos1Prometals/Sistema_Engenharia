@@ -5,7 +5,7 @@
 //  Usa a biblioteca SheetJS, carregada só quando precisa.
 // =====================================================================
 import { ELEMENTOS, acharLiga, normLiga, lerOps, temAnalise } from './calculo.js?v=1.5.1';
-import { idSeguro } from '../comum/banco.js';
+import { idSeguro } from '../comum/banco.js?v=1.7.1';
 
 const SHEETJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 
