@@ -2,9 +2,9 @@
 //  comum/casca.js — barra lateral, topo, login obrigatório e ajudantes
 //  de tela (avisos, janelas, ícones, formatação) usados por todos os módulos.
 // =====================================================================
-import * as banco from './banco.js?v=2.0.1';
+import * as banco from './banco.js?v=2.0.2';
 
-export const VERSAO = '2.0.1';
+export const VERSAO = '2.0.2';
 
 // ---------- quem acessa o quê (tela Usuários e acessos) ----------
 // Cada usuário tem um documento em eng_acessos (id = e-mail em minúsculas):
@@ -20,14 +20,14 @@ export const TELAS = [
   { id: 'retornos', grupo: 'Cálculo de Liga', nome: 'Retornos', niveis: ['ver', 'editar'], dica: 'Peso, análise e PDF do laboratório' },
   { id: 'ligas', grupo: 'Cálculo de Liga', nome: 'Ligas e normas', niveis: ['ver', 'editar'] },
   { id: 'materiais', grupo: 'Cálculo de Liga', nome: 'Sucatas e ferroligas', niveis: ['ver', 'editar'] },
-  { id: 'mapa', grupo: 'Almoxarifado modelos', nome: 'Prateleiras', niveis: ['ver'], dica: 'Pôr modelo numa vaga segue o "Editar" de Modelos' },
+  { id: 'mapa', grupo: 'Almoxarifado modelos', nome: 'Prateleiras', niveis: ['ver', 'editar'], dica: 'Editar = pôr um modelo sem posição numa vaga livre' },
   { id: 'modelos', grupo: 'Almoxarifado modelos', nome: 'Modelos', niveis: ['ver', 'editar'], dica: 'Cadastro, posição e PDF do desenho' },
-  { id: 'manutencao', grupo: 'Almoxarifado modelos', nome: 'Manutenção de modelos', niveis: ['editar'], semMenu: true, dica: 'Só registrar a ida e a volta da manutenção' },
-  { id: 'comercial', grupo: 'Modelos Prometals', nome: 'Modelos Prometals (lista comercial)', niveis: ['ver'] },
+  { id: 'manutencao', grupo: 'Almoxarifado modelos', nome: 'Manutenção de modelos', niveis: ['ver', 'editar'], semMenu: true, dica: 'Editar = registrar a ida e a volta da manutenção na ficha do modelo (Só ver não muda nada: é só um botão)' },
+  { id: 'comercial', grupo: 'Modelos Prometals', nome: 'Modelos Prometals (lista comercial)', niveis: ['ver', 'editar'], dica: 'Tela de consulta: os dados da ficha comercial se editam na ficha do modelo (Editar de Modelos)' },
   { id: 'ruas', grupo: 'Almoxarifado modelos', nome: 'Ruas e importação', niveis: ['ver', 'editar'] },
   { id: 'modelosClientes', grupo: 'Modelos de clientes', nome: 'Modelos de clientes', niveis: ['ver', 'editar'], dica: 'Painel, modelos, devoluções, clientes, planilhas e configurações (todo o módulo)' },
   { id: 'certificados', grupo: 'Qualidade', nome: 'Certificados', niveis: ['ver', 'editar'] },
-  { id: 'instrucao', grupo: 'Processo', nome: 'Instrução de Processo (atalho)', niveis: ['ver'], dica: 'Só o atalho no menu: o app fica no Supabase, com login próprio' },
+  { id: 'instrucao', grupo: 'Processo', nome: 'Instrução de Processo (atalho)', niveis: ['ver', 'editar'], dica: 'Só o atalho no menu (Só ver e Editar dão o mesmo): o app fica no Supabase, com login próprio' },
   { id: 'config', grupo: 'Sistema', nome: 'Configurações', niveis: ['ver', 'editar'], dica: 'Forno, numeração, importação das planilhas e cópia de segurança' },
 ];
 export const TELAS_LIGA = ['corridas', 'amostras', 'retornos', 'ligas', 'materiais', 'config'];

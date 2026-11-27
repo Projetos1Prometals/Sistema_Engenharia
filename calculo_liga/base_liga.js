@@ -5,11 +5,11 @@
 //  Telas: corridas/, ficha_corrida/, amostras_dia/, retornos/, ligas_normas/,
 //  sucatas_ferroligas/ e sistema/configuracoes/.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=2.0.1';
-import { montar, esc, fmt, podeEditar, podeVer, modoLeitura, semAcesso, aviso, endereco } from '../comum/casca.js?v=2.0.1';
-import { COL, acharLiga, saldos, normLiga } from './calculo.js?v=2.0.1';
-import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados_iniciais.js?v=2.0.1';
-import { corPadrao } from './etiquetas_amostras.js?v=2.0.1';
+import * as banco from '../comum/banco.js?v=2.0.2';
+import { montar, esc, fmt, podeEditar, podeVer, modoLeitura, semAcesso, aviso, endereco } from '../comum/casca.js?v=2.0.2';
+import { COL, acharLiga, saldos, normLiga } from './calculo.js?v=2.0.2';
+import { LIGAS_INICIAIS, MATERIAIS_INICIAIS, CONFIG_INICIAL } from './dados_iniciais.js?v=2.0.2';
+import { corPadrao } from './etiquetas_amostras.js?v=2.0.2';
 
 // ---------------------------------------------------------------------
 // Estado (dados que chegam do banco)

@@ -8,13 +8,13 @@
 //  (corrida, material, OP da liga e análise do laboratório já preenchidos)
 //  e a conferência usa as normas de "Ligas e normas".
 // =====================================================================
-import * as banco from '../comum/banco.js?v=2.0.1';
-import { montar, aviso, esc, fmtData, podeEditar, podeVer, semAcesso, endereco, ir } from '../comum/casca.js?v=2.0.1';
-import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../calculo_liga/calculo.js?v=2.0.1';
-import { criarCertificadosAuto, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=2.0.1';
+import * as banco from '../comum/banco.js?v=2.0.2';
+import { montar, aviso, esc, fmtData, podeEditar, podeVer, semAcesso, endereco, ir } from '../comum/casca.js?v=2.0.2';
+import { COL as COL_LIGA, acharLiga, numeroCorrida, temAnalise, ELEMENTOS, ELEMENTOS_LAB_EXTRA } from '../calculo_liga/calculo.js?v=2.0.2';
+import { criarCertificadosAuto, codigoRetornoDoCert as codigoRetornoDoCertAuto } from './auto.js?v=2.0.2';
 import {
   QALL, clone, parseNum, upgradeCert, certHTML, unidadesProdutos, produtosParte, rotuloPagina, certContinuacao,
-} from './folha_certificado.js?v=2.0.1';
+} from './folha_certificado.js?v=2.0.2';
 
 export const COL = { certs: 'eng_certificados' };
 export const CFG_ID = 'certificado';                       // eng_config/certificado → { assinatura }

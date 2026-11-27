@@ -3,11 +3,11 @@
 //  Etiqueta do saquinho, etiquetas dos retornos e formulário A4 do
 //  laboratório (Priner), montados com as corridas do dia.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.1';
-import { aviso, janela, esc, num, hoje, fmtData, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
-import { COL } from '../calculo.js?v=2.0.1';
-import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta } from '../etiquetas_amostras.js?v=2.0.1';
-import { S, C, ED, cfg, ligaDe, corDaLiga, ent, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.1';
+import * as banco from '../../comum/banco.js?v=2.0.2';
+import { aviso, janela, esc, num, hoje, fmtData, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.2';
+import { COL } from '../calculo.js?v=2.0.2';
+import { etiquetasSaquinho, etiquetaRetorno, folhasRetorno, formularioPriner, PRINER_PADRAO, corridaEtiqueta } from '../etiquetas_amostras.js?v=2.0.2';
+import { S, C, ED, cfg, ligaDe, corDaLiga, ent, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.2';
 
 const amostras = filtroDaTela('amostras', { data: null, fora: new Set(), copias: 1, retornos: false });
 amostras.fora = new Set();

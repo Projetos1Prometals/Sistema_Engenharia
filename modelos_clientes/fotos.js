@@ -5,7 +5,7 @@
 //  no modo local, IndexedDB). Id do arquivo sempre começa com "mcli_"
 //  (o firestore.rules libera esses arquivos para quem edita este módulo).
 // =====================================================================
-import * as banco from '../comum/banco.js?v=2.0.1';
+import * as banco from '../comum/banco.js?v=2.0.2';
 
 export const TIPOS_FOTO = { frente: 'Frente', traseira: 'Traseira', macho: 'Macho', outra: 'Outras' };
 export const LADO_MAX = 1280;

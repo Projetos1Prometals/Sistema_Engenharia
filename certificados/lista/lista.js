@@ -3,15 +3,15 @@
 //  Busca pela OP (em qual corrida ela está), corrida, material, cliente…
 //  ?novo=<id da corrida> abre a janela "Novo certificado" já com a corrida.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.1';
-import { aviso, janela, esc, icone, parametro, filtroDaTela, ir } from '../../comum/casca.js?v=2.0.1';
-import { numeroCorrida } from '../../calculo_liga/calculo.js?v=2.0.1';
-import { criarCertificadosDe, retornosSemCertificado } from '../auto.js?v=2.0.1';
-import { FIXED, DEF, clone, hojeBR, abaFrom, setQuimica, SEC_AFTER_Q, shiftNum } from '../folha_certificado.js?v=2.0.1';
+import * as banco from '../../comum/banco.js?v=2.0.2';
+import { aviso, janela, esc, icone, parametro, filtroDaTela, ir } from '../../comum/casca.js?v=2.0.2';
+import { numeroCorrida } from '../../calculo_liga/calculo.js?v=2.0.2';
+import { criarCertificadosDe, retornosSemCertificado } from '../auto.js?v=2.0.2';
+import { FIXED, DEF, clone, hojeBR, abaFrom, setQuimica, SEC_AFTER_Q, shiftNum } from '../folha_certificado.js?v=2.0.2';
 import {
   S, C, ED, url, iniciarTela, aoMudarDados, norm, opTokens, primeiraLinha, uid, nextOrdem, maisRecente, corridaDe, nomeCorrida, descCorrida,
   analiseDaCorrida, quimicaDe, gravar, abrir, imprimir,
-} from '../base_certificados.js?v=2.0.1';
+} from '../base_certificados.js?v=2.0.2';
 
 const busca = filtroDaTela('certificados', { q: '' });
 busca.sel = new Set();

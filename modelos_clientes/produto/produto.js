@@ -2,10 +2,10 @@
 //  modelos_clientes/produto/produto.js — consulta pelo código do produto
 //  ?codigo=<código do produto> (o mesmo do NW e da Instrução de Processo)
 // =====================================================================
-import { definirTrilha, esc, icone, parametro } from '../../comum/casca.js?v=2.0.1';
-import { norm } from '../planilha.js?v=2.0.1';
-import { TIPOS_FOTO } from '../fotos.js?v=2.0.1';
-import { S, C, url, iniciarTela, mostrar, rotuloCli, tagSit, fato } from '../base_mcli.js?v=2.0.1';
+import { definirTrilha, esc, icone, parametro } from '../../comum/casca.js?v=2.0.2';
+import { norm } from '../planilha.js?v=2.0.2';
+import { TIPOS_FOTO } from '../fotos.js?v=2.0.2';
+import { S, C, url, iniciarTela, mostrar, rotuloCli, tagSit, fato } from '../base_mcli.js?v=2.0.2';
 
 iniciarTela({ menu: 'mcli-modelos', desenhar: () => paginaProduto(parametro('codigo')) });
 

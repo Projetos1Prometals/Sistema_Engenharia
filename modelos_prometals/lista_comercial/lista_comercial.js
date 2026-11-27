@@ -3,9 +3,9 @@
 //  (aba Comercial da planilha): refinadores com dados técnicos e situação
 //  no estoque. Só consulta; usa a base do Almoxarifado modelos.
 // =====================================================================
-import { esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
-import { normCodigo, situacao, chaveDiametro } from '../../almoxarifado_modelos/regras.js?v=2.0.1';
-import { S, C, url, iniciarTela, aoMudarDados, tagSit, fmtValor, kpi, abrirDesenho } from '../../almoxarifado_modelos/base_modelos.js?v=2.0.1';
+import { esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.2';
+import { normCodigo, situacao, chaveDiametro } from '../../almoxarifado_modelos/regras.js?v=2.0.2';
+import { S, C, url, iniciarTela, aoMudarDados, tagSit, fmtValor, kpi, abrirDesenho } from '../../almoxarifado_modelos/base_modelos.js?v=2.0.2';
 
 const f = filtroDaTela('comercial', { chip: 'todos', diam: '', q: '' });
 iniciarTela({ ver: ['comercial'], edita: null, menu: 'comercial', trilha: ['Modelos Prometals', 'Lista comercial'], desenhar });

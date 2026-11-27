@@ -2,19 +2,19 @@
 //  almoxarifado_modelos/prateleiras/prateleiras.js — tela Prateleiras (mapa)
 //  Onde está cada modelo; vaga livre clicada: pôr um modelo ou cadastrar um novo.
 // =====================================================================
-import { aviso, janela, esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
-import { normCodigo, situacao, posicoesDaRua } from '../regras.js?v=2.0.1';
-import { S, C, ED, url, iniciarTela, aoMudarDados, kpi, somenteLeitura, evento, gravarModelo } from '../base_modelos.js?v=2.0.1';
+import { aviso, janela, esc, icone, podeEditar, filtroDaTela } from '../../comum/casca.js?v=2.0.2';
+import { normCodigo, situacao, posicoesDaRua } from '../regras.js?v=2.0.2';
+import { S, C, ED, url, iniciarTela, aoMudarDados, kpi, somenteLeitura, evento, gravarModelo } from '../base_modelos.js?v=2.0.2';
 
 const f = filtroDaTela('prateleiras', { q: '' });
-// pôr modelo numa vaga segue o "Editar" de Modelos
-iniciarTela({ ver: ['mapa'], edita: 'modelos', menu: 'mapa', trilha: ['Almoxarifado modelos', 'Prateleiras'], desenhar });
+// Editar das Prateleiras = pôr um modelo sem posição numa vaga livre
+iniciarTela({ ver: ['mapa'], edita: 'mapa', menu: 'mapa', trilha: ['Almoxarifado modelos', 'Prateleiras'], desenhar });
 
 function desenhar() {
   C.innerHTML = `
     <div class="cab">
       <div class="cresce"><h1 class="titulo">Prateleiras</h1><p class="sub">Onde está cada modelo. Clique numa posição para abrir o modelo${ED ? ' ou colocar um modelo numa vaga livre' : ''}.</p></div>
-      ${ED ? `<a class="btn pri" href="${url('ficha_modelo')}">${icone('mais')} Novo modelo</a>` : ''}
+      ${podeEditar('modelos') ? `<a class="btn pri" href="${url('ficha_modelo')}">${icone('mais')} Novo modelo</a>` : ''}
     </div>
     ${somenteLeitura()}
     <div class="kpis" id="kpis"></div>
@@ -73,7 +73,7 @@ function escolherParaVaga(pos) {
     html: `<p style="margin-top:0">Esta posição está livre. Coloque aqui um modelo que está sem posição, ou cadastre um novo.</p>
       <label class="campo">Modelo sem posição<select class="ent" id="vMod"><option value="">Escolha…</option>${semPos.map(m => `<option value="${esc(m.id)}">${esc(m.codigo)}${m.descricao ? ' — ' + esc(m.descricao) : ''}</option>`).join('')}</select></label>`,
     botoes: [
-      { texto: icone('mais') + ' Novo modelo aqui', esquerda: true, acao: () => { location.href = url('ficha_modelo', { pos }); } },
+      ...(podeEditar('modelos') ? [{ texto: icone('mais') + ' Novo modelo aqui', esquerda: true, acao: () => { location.href = url('ficha_modelo', { pos }); } }] : []),
       { texto: 'Cancelar' },
       { texto: 'Colocar aqui', cls: 'pri', acao: el => {
         const m = S.porId.get(el.querySelector('#vMod').value);

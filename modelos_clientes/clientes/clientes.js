@@ -1,9 +1,9 @@
 // =====================================================================
 //  modelos_clientes/clientes/clientes.js — clientes (dados do "ID Cliente" do documento)
 // =====================================================================
-import { esc, icone } from '../../comum/casca.js?v=2.0.1';
-import { norm, digitos } from '../planilha.js?v=2.0.1';
-import { S, filtros, iniciarTela, mostrar, bt } from '../base_mcli.js?v=2.0.1';
+import { esc, icone } from '../../comum/casca.js?v=2.0.2';
+import { norm, digitos } from '../planilha.js?v=2.0.2';
+import { S, filtros, iniciarTela, mostrar, bt } from '../base_mcli.js?v=2.0.2';
 
 iniciarTela({ menu: 'mcli-clientes', desenhar: paginaClientes });
 

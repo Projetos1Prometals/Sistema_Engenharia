@@ -26,7 +26,7 @@ em português. Visão geral e passo a passo de instalação: `LEIA-ME.md`.
 
 ## Versão (cache do navegador)
 - **Um número só** para tudo: `VERSAO` em `comum/casca.js` = o `?v=` de **todos** os `import`, `<script>` e `<link>`
-  (hoje 2.0.1). Ao mudar qualquer .js/.css, suba a versão em todos de uma vez
+  (hoje 2.0.2). Ao mudar qualquer .js/.css, suba a versão em todos de uma vez
   (`sed -i -E "s/\?v=[0-9]+\.[0-9]+\.[0-9]+/?v=X.Y.Z/g"` nos .js/.html), para o navegador não misturar arquivos novos com
   antigos do cache (e `casca.js`/`banco.js` não virarem duas cópias, o que quebra o acesso carregado).
 
@@ -204,8 +204,9 @@ Perguntar ao usuário antes de enviar qualquer coisa para o GitHub.
 - Pedido do usuário: controlar por **tela** quem vê e quem edita. Coleção `eng_acessos`, id = e-mail em minúsculas:
   `{ email, nome, telas: { corridas: 'editar', retornos: 'ver', … } }` (tela fora da lista = sem acesso).
 - Telas = `TELAS` em `casca.js` (corridas, amostras, retornos, ligas, materiais, mapa, modelos, manutencao, comercial, ruas,
-  modelosClientes, certificados, instrucao, config); `niveis` diz o que cada uma aceita (mapa, comercial e instrucao só
-  "ver"; manutencao só "editar").
+  modelosClientes, certificados, instrucao, config); `niveis`: todas aceitam Sem acesso / Só ver / Editar (pedido do usuário, 2026-11-27).
+  Prateleiras: Editar = pôr modelo numa vaga (regra `edita('mapa')` só muda posicao/historico); Lista comercial, Instrução e
+  Manutenção: a opção existe, mas Só ver e Editar dão o mesmo onde não há o que gravar (Manutenção: Editar = "Pode registrar").
 - Menu (`MENU` em `casca.js`): item com `filhos` = um módulo (Almoxarifado Prometals, Modelos de clientes); os filhos só
   aparecem embaixo quando se está no módulo (`ativo`/`marcarMenu`). Filho com `tela:` usa essa permissão em vez do `id`.
 - Administrador = `ADMINS` em `casca.js` = `admin()` no `firestore.rules` (projetos1@): vê e edita tudo e é o único

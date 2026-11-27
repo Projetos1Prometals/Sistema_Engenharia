@@ -3,12 +3,12 @@
 //  ?id=<id do modelo>; sem id = novo modelo (?pos=K25 já escolhe a posição).
 //  Abre para quem vê qualquer tela de Modelos; editar segue "Modelos".
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.1';
-import { definirTrilha, aviso, esc, num, fmtData, icone, TELAS_MODELOS, ir } from '../../comum/casca.js?v=2.0.1';
-import { COL, EXTENSOES, CAMPOS_COMERCIAIS, idModelo, chaveDesenho, situacao, lerPosicao, posicoesDaRua, lerVolumes } from '../regras.js?v=2.0.1';
+import * as banco from '../../comum/banco.js?v=2.0.2';
+import { definirTrilha, aviso, esc, num, fmtData, icone, TELAS_MODELOS, ir } from '../../comum/casca.js?v=2.0.2';
+import { COL, EXTENSOES, CAMPOS_COMERCIAIS, idModelo, chaveDesenho, situacao, lerPosicao, posicoesDaRua, lerVolumes } from '../regras.js?v=2.0.2';
 import {
   S, C, ED, MAN, url, iniciarTela, aoMudarDados, ent, tagSit, fmtTamanho, somenteLeitura, evento, semMeta, gravarModelo, abrirDesenho,
-} from '../base_modelos.js?v=2.0.1';
+} from '../base_modelos.js?v=2.0.2';
 
 let sujo = false;   // alterações não salvas
 iniciarTela({

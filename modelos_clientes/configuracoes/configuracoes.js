@@ -2,10 +2,10 @@
 //  modelos_clientes/configuracoes/configuracoes.js — dados da empresa e texto
 //  da declaração do documento de devolução (eng_config/modelosClientes)
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.1';
-import { aviso, esc, icone } from '../../comum/casca.js?v=2.0.1';
-import { DECL_PADRAO, CHAVES_EMPRESA } from '../folha_devolucao.js?v=2.0.1';
-import { C, ED, COL, CFG_ID, E, iniciarTela, mostrar, agoraISO } from '../base_mcli.js?v=2.0.1';
+import * as banco from '../../comum/banco.js?v=2.0.2';
+import { aviso, esc, icone } from '../../comum/casca.js?v=2.0.2';
+import { DECL_PADRAO, CHAVES_EMPRESA } from '../folha_devolucao.js?v=2.0.2';
+import { C, ED, COL, CFG_ID, E, iniciarTela, mostrar, agoraISO } from '../base_mcli.js?v=2.0.2';
 
 iniciarTela({ menu: 'mcli-config', desenhar: paginaConfig });
 

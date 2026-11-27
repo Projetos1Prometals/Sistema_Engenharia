@@ -98,6 +98,8 @@ service cloud.firestore {
       allow write: if edita('modelos') || edita('ruas');
       // manutenção: só pode mudar a situação e o histórico de um modelo que já existe
       allow update: if edita('manutencao') && soMudou(['situacao', 'historico', '_em', '_por']);
+      // Prateleiras (Editar): só pôr um modelo que já existe numa vaga (posição e histórico)
+      allow update: if edita('mapa') && soMudou(['posicao', 'historico', '_em', '_por']);
     }
     match /eng_ruas/{id} {
       allow read: if leModelos();

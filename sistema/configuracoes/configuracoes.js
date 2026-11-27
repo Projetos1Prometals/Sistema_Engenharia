@@ -3,11 +3,11 @@
 //  Forno, numeração das corridas, importação das planilhas do Cálculo de
 //  Liga e cópia de segurança. Usa a base do Cálculo de Liga.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.1';
-import { aviso, janela, esc, num, hoje, fmtData, icone, baixarArquivo } from '../../comum/casca.js?v=2.0.1';
-import { COL, numeroCorrida } from '../../calculo_liga/calculo.js?v=2.0.1';
-import { lerPlanilha, lerControle, aplicarControle } from '../../calculo_liga/importar_planilhas.js?v=2.0.1';
-import { S, C, est, cfg, semMeta, entNum, iniciarTela, aoMudarDados } from '../../calculo_liga/base_liga.js?v=2.0.1';
+import * as banco from '../../comum/banco.js?v=2.0.2';
+import { aviso, janela, esc, num, hoje, fmtData, icone, baixarArquivo } from '../../comum/casca.js?v=2.0.2';
+import { COL, numeroCorrida } from '../../calculo_liga/calculo.js?v=2.0.2';
+import { lerPlanilha, lerControle, aplicarControle } from '../../calculo_liga/importar_planilhas.js?v=2.0.2';
+import { S, C, est, cfg, semMeta, entNum, iniciarTela, aoMudarDados } from '../../calculo_liga/base_liga.js?v=2.0.2';
 
 iniciarTela({ tela: 'config', trilha: ['Sistema', 'Configurações'], desenhar });
 

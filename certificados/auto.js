@@ -7,8 +7,8 @@
 //    O retorno guarda "certificadoAuto" para não criar de novo (nem se o
 //    certificado for excluído).
 // =====================================================================
-import { COL, acharLiga, temAnalise } from '../calculo_liga/calculo.js?v=2.0.1';
-import { DEF, FIXED, QALL, SEC_AFTER_Q, clone, hojeBR, abaFrom, shiftNum } from './folha_certificado.js?v=2.0.1';
+import { COL, acharLiga, temAnalise } from '../calculo_liga/calculo.js?v=2.0.2';
+import { DEF, FIXED, QALL, SEC_AFTER_Q, clone, hojeBR, abaFrom, shiftNum } from './folha_certificado.js?v=2.0.2';
 
 export const COL_CERTS = 'eng_certificados';
 const fmtQ = v => (v == null || v === '' ? '' : String(v).replace('.', ','));

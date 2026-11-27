@@ -5,9 +5,9 @@
 //  Telas: prateleiras/, modelos/, ficha_modelo/, ruas_importacao/ e
 //  modelos_prometals/lista_comercial/. Só a Engenharia edita; os outros consultam.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=2.0.1';
-import { montar, aviso, esc, icone, hoje, podeEditar, podeVer, semAcesso, endereco } from '../comum/casca.js?v=2.0.1';
-import { COL, SITUACOES, situacao, ocupacao, chaveDesenho } from './regras.js?v=2.0.1';
+import * as banco from '../comum/banco.js?v=2.0.2';
+import { montar, aviso, esc, icone, hoje, podeEditar, podeVer, semAcesso, endereco } from '../comum/casca.js?v=2.0.2';
+import { COL, SITUACOES, situacao, ocupacao, chaveDesenho } from './regras.js?v=2.0.2';
 
 export const S = { modelos: [], ruas: [], porId: new Map(), ocup: new Map(), chegou: {} };
 export let C = null;

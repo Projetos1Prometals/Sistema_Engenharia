@@ -4,8 +4,8 @@
 //  corridas (aba Banco de dados) e contadores (aba SET.).
 //  Usa a biblioteca SheetJS, carregada só quando precisa.
 // =====================================================================
-import { ELEMENTOS, acharLiga, normLiga, lerOps, temAnalise } from './calculo.js?v=2.0.1';
-import { idSeguro } from '../comum/banco.js?v=2.0.1';
+import { ELEMENTOS, acharLiga, normLiga, lerOps, temAnalise } from './calculo.js?v=2.0.2';
+import { idSeguro } from '../comum/banco.js?v=2.0.2';
 
 const SHEETJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 

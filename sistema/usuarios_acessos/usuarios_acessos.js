@@ -4,8 +4,8 @@
 //  Grava em eng_acessos (id = e-mail em minúsculas); o firestore.rules lê
 //  a mesma coleção, então o bloqueio vale de verdade no banco.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.1';
-import { montar, aviso, janela, esc, icone, ehAdmin, semAcesso, TELAS, ADMINS, COL_ACESSOS, RESTRINGIR } from '../../comum/casca.js?v=2.0.1';
+import * as banco from '../../comum/banco.js?v=2.0.2';
+import { montar, aviso, janela, esc, icone, ehAdmin, semAcesso, TELAS, ADMINS, COL_ACESSOS, RESTRINGIR } from '../../comum/casca.js?v=2.0.2';
 
 await montar({ ativo: 'usuarios', trilha: ['Sistema', 'Usuários e acessos'] });
 const C = document.getElementById('conteudo');
@@ -36,7 +36,7 @@ function pintar() {
       ${usuarios.map((u, i) => {
         const v = (u.telas || {})[t.id] || '';
         return `<td class="cel"><select class="ent niv-${v}" data-cel="${i}:${t.id}">
-          ${['', ...t.niveis].map(n => `<option value="${n}" ${n === v ? 'selected' : ''}>${n === 'editar' && t.niveis.length === 1 && t.id === 'manutencao' ? 'Pode registrar' : ROTULO[n]}</option>`).join('')}
+          ${['', ...t.niveis].map(n => `<option value="${n}" ${n === v ? 'selected' : ''}>${n === 'editar' && t.id === 'manutencao' ? 'Pode registrar' : ROTULO[n]}</option>`).join('')}
         </select></td>`;
       }).join('')}
     </tr>`;

@@ -8,11 +8,11 @@
 //  Aqui ficam os dados, o acesso, as janelas e as ações comuns às telas.
 //  Permissão: tela "modelosClientes" em Usuários e acessos.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=2.0.1';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, modoLeitura, endereco, filtroDaTela, ir } from '../comum/casca.js?v=2.0.1';
-import { empresa, fmtDataHora } from './folha_devolucao.js?v=2.0.1';
-import { TIPOS_FOTO, enviarFotos, preencherFotos, urlFoto, apagarFoto } from './fotos.js?v=2.0.1';
-import { norm } from './planilha.js?v=2.0.1';
+import * as banco from '../comum/banco.js?v=2.0.2';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, modoLeitura, endereco, filtroDaTela, ir } from '../comum/casca.js?v=2.0.2';
+import { empresa, fmtDataHora } from './folha_devolucao.js?v=2.0.2';
+import { TIPOS_FOTO, enviarFotos, preencherFotos, urlFoto, apagarFoto } from './fotos.js?v=2.0.2';
+import { norm } from './planilha.js?v=2.0.2';
 
 export const COL = {
   clientes: 'eng_clientes', modelos: 'eng_mcli_modelos', eventos: 'eng_mcli_eventos', devolucoes: 'eng_mcli_devolucoes',

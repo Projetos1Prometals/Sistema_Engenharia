@@ -4,7 +4,7 @@
 //  ruas e vagas livres) e "Comercial" (ficha técnica dos refinadores).
 //  Código repetido NÃO entra: fica a primeira ocorrência e as outras vão para os avisos.
 // =====================================================================
-import { idModelo, lerPosicao, lerVolumes, CAMPOS_COMERCIAIS } from './regras.js?v=2.0.1';
+import { idModelo, lerPosicao, lerVolumes, CAMPOS_COMERCIAIS } from './regras.js?v=2.0.2';
 
 const SHEETJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 function carregarSheetJS() {

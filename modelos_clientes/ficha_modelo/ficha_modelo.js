@@ -2,8 +2,8 @@
 //  modelos_clientes/ficha_modelo/ficha_modelo.js — ficha do modelo de cliente
 //  (dados, fotos e histórico). ?id=<id do modelo>
 // =====================================================================
-import { definirTrilha, esc, fmtData, icone, parametro } from '../../comum/casca.js?v=2.0.1';
-import { S, ED, url, iniciarTela, mostrar, bt, rotuloCli, tagSit, eventosDoModelo, fato, htmlFotosPorTipo, linhaDoTempo } from '../base_mcli.js?v=2.0.1';
+import { definirTrilha, esc, fmtData, icone, parametro } from '../../comum/casca.js?v=2.0.2';
+import { S, ED, url, iniciarTela, mostrar, bt, rotuloCli, tagSit, eventosDoModelo, fato, htmlFotosPorTipo, linhaDoTempo } from '../base_mcli.js?v=2.0.2';
 
 iniciarTela({ menu: 'mcli-modelos', desenhar: () => paginaModelo(parametro('id')) });
 
