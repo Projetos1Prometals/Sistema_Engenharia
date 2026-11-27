@@ -2,10 +2,10 @@
 //  calculo_liga/ligas_normas/ligas_normas.js — tela Ligas e normas
 //  Faixa mínima e máxima de cada elemento; usada na corrida, no boletim e nos certificados.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { aviso, janela, esc, num, icone } from '../../comum/casca.js?v=2.0.0';
-import { ELEMENTOS, COL, mesmaLiga, normLiga } from '../calculo.js?v=2.0.0';
-import { S, C, ED, corPadraoLiga, semMeta, ent, entNum, fmtFaixa, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { aviso, janela, esc, num, icone } from '../../comum/casca.js?v=2.0.1';
+import { ELEMENTOS, COL, mesmaLiga, normLiga } from '../calculo.js?v=2.0.1';
+import { S, C, ED, corPadraoLiga, semMeta, ent, entNum, fmtFaixa, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.1';
 
 iniciarTela({ tela: 'ligas', trilha: ['Cálculo de Liga', 'Ligas e normas'], desenhar });
 

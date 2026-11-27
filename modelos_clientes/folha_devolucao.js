@@ -3,8 +3,8 @@
 //  Mesmo layout do app antigo (T.M Gastão / PROMETALS). Impresso pelo
 //  navegador (Ctrl+P), como o boletim da corrida. Não mudar sem pedido.
 // =====================================================================
-import { raiz } from '../comum/banco.js?v=2.0.0';
-import { esc, fmtData } from '../comum/casca.js?v=2.0.0';
+import { raiz } from '../comum/banco.js?v=2.0.1';
+import { esc, fmtData } from '../comum/casca.js?v=2.0.1';
 
 export const DECL_PADRAO = 'Eu, {nome}, portador do CPF nº {cpf} e RG nº {rg}, declaro que, na data de {data}, retirei com o veículo {veiculo} placa {placa}, da empresa {empresa}, localizada na {endereco}, os modelos descritos acima, nas condições apresentadas no registro fotográfico deste documento.';
 export const EMPRESA_PADRAO = {

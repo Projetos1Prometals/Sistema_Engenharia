@@ -3,13 +3,13 @@
 //  (equivalente à aba PREENCHIMENTO + boletim + laboratório)
 //  ?id=<id da corrida>; sem id = nova corrida.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { definirTrilha, aviso, janela, esc, num, fmt, fmtKg, hoje, icone, podeEditar, endereco, parametro, ir } from '../../comum/casca.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { definirTrilha, aviso, janela, esc, num, fmt, fmtKg, hoje, icone, podeEditar, endereco, parametro, ir } from '../../comum/casca.js?v=2.0.1';
 import {
   ELEMENTOS, ELEMENTOS_LAB_EXTRA, COL, mesmaLiga, calcular, situacaoElemento, numeroCorrida, codigoRetornoDaCorrida, idCorrida,
   lerOps, temAnalise, normLiga, baixaDoRetorno,
-} from '../calculo.js?v=2.0.0';
-import { S, C, ED, cfg, ligaDe, sucatas, ferroligas, semMeta, ent, entNum, optLigas, fmtComp, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.0';
+} from '../calculo.js?v=2.0.1';
+import { S, C, ED, cfg, ligaDe, sucatas, ferroligas, semMeta, ent, entNum, optLigas, fmtComp, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.1';
 
 let editor = null;     // corrida aberta: { id, d (rascunho), sujo }
 iniciarTela({

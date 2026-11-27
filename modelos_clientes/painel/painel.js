@@ -1,8 +1,8 @@
 // =====================================================================
 //  modelos_clientes/painel/painel.js — Painel dos Modelos de clientes
 // =====================================================================
-import { esc, fmtData, icone } from '../../comum/casca.js?v=2.0.0';
-import { S, url, iniciarTela, mostrar, bt, parados, consertosAbertos, eventosOrdenados, linhaDoTempo, nomeCli, rotuloCli } from '../base_mcli.js?v=2.0.0';
+import { esc, fmtData, icone } from '../../comum/casca.js?v=2.0.1';
+import { S, url, iniciarTela, mostrar, bt, parados, consertosAbertos, eventosOrdenados, linhaDoTempo, nomeCli, rotuloCli } from '../base_mcli.js?v=2.0.1';
 
 iniciarTela({ menu: 'mcli-painel', desenhar: paginaPainel });
 

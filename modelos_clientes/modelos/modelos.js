@@ -1,9 +1,9 @@
 // =====================================================================
 //  modelos_clientes/modelos/modelos.js — lista dos Modelos de clientes
 // =====================================================================
-import { esc, fmtData, icone } from '../../comum/casca.js?v=2.0.0';
-import { norm } from '../planilha.js?v=2.0.0';
-import { S, filtros, url, iniciarTela, mostrar, bt, parados, cli, nomeCli, tagSit, opcoesClientes } from '../base_mcli.js?v=2.0.0';
+import { esc, fmtData, icone } from '../../comum/casca.js?v=2.0.1';
+import { norm } from '../planilha.js?v=2.0.1';
+import { S, filtros, url, iniciarTela, mostrar, bt, parados, cli, nomeCli, tagSit, opcoesClientes } from '../base_mcli.js?v=2.0.1';
 
 iniciarTela({ menu: 'mcli-modelos', desenhar: paginaModelos });
 

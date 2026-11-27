@@ -2,9 +2,9 @@
 //  modelos_clientes/devolucao/devolucao.js — uma devolução e o documento A4
 //  (impresso pelo navegador: Ctrl+P ou "Imprimir / PDF"). ?id=<id da devolução>
 // =====================================================================
-import { definirTrilha, esc, fmtData, icone, parametro } from '../../comum/casca.js?v=2.0.0';
-import { htmlFolha, fmtDataHora } from '../folha_devolucao.js?v=2.0.0';
-import { S, url, iniciarTela, mostrar, bt, cli, tagSit, DEV_STATUS, E } from '../base_mcli.js?v=2.0.0';
+import { definirTrilha, esc, fmtData, icone, parametro } from '../../comum/casca.js?v=2.0.1';
+import { htmlFolha, fmtDataHora } from '../folha_devolucao.js?v=2.0.1';
+import { S, url, iniciarTela, mostrar, bt, cli, tagSit, DEV_STATUS, E } from '../base_mcli.js?v=2.0.1';
 
 iniciarTela({ menu: 'mcli-devolucoes', desenhar: () => paginaDevolucao(parametro('id')) });
 

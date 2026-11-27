@@ -26,7 +26,7 @@ em português. Visão geral e passo a passo de instalação: `LEIA-ME.md`.
 
 ## Versão (cache do navegador)
 - **Um número só** para tudo: `VERSAO` em `comum/casca.js` = o `?v=` de **todos** os `import`, `<script>` e `<link>`
-  (hoje 2.0.0). Ao mudar qualquer .js/.css, suba a versão em todos de uma vez
+  (hoje 2.0.1). Ao mudar qualquer .js/.css, suba a versão em todos de uma vez
   (`sed -i -E "s/\?v=[0-9]+\.[0-9]+\.[0-9]+/?v=X.Y.Z/g"` nos .js/.html), para o navegador não misturar arquivos novos com
   antigos do cache (e `casca.js`/`banco.js` não virarem duas cópias, o que quebra o acesso carregado).
 
@@ -117,7 +117,7 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   (no Firestore, só grava se a mudança tocar apenas `situacao`, `historico`, `_em`, `_por`).
 
 ## Modelos de clientes (`modelos_clientes/`) — modelos que os clientes deixam na empresa
-- **Desligado por enquanto** (pedido do usuário, 2026-11-27): `TELAS_DESLIGADAS = ['modelosClientes']` em `casca.js`
+- Pode ser desligado sem apagar nada: `TELAS_DESLIGADAS = ['modelosClientes']` em `casca.js` (ficou desligado de 2026-11-27 até voltar no mesmo dia, pedido do usuário)
   → some do menu e da Visão geral, e a página mostra "sem acesso" (até para o admin). Para voltar: esvaziar a lista.
 - Porte do app antigo (artifact do Claude, `app-modelos-clientes/`, no `.gitignore`, só estudo). Mesmas telas e regras:
   `painel/`, `modelos/` (+ `ficha_modelo/?id=`), `devolucoes/` (+ `devolucao/?id=`), `clientes/`, `importar_exportar/`, `configuracoes/`.

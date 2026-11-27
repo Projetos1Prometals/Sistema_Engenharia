@@ -2,12 +2,12 @@
 //  calculo_liga/retornos/retornos.js — tela Retornos
 //  Análise do laboratório (PDF) e saldo de cada retorno.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { aviso, janela, esc, num, fmtKg, fmtData, icone, podeEditar, endereco, filtroDaTela } from '../../comum/casca.js?v=2.0.0';
-import { ELEMENTOS, ELEMENTOS_LAB_EXTRA, COL, mesmaLiga, codigoRetornoDaCorrida, temAnalise } from '../calculo.js?v=2.0.0';
-import { lerLaudoOuAvisar } from '../laudo.js?v=2.0.0';
-import { criarCertificadosAuto, codigoRetornoDoCert, COL_CERTS } from '../../certificados/auto.js?v=2.0.0';
-import { S, C, ED, ligaDe, semMeta, ent, entNum, optLigas, fmtComp, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { aviso, janela, esc, num, fmtKg, fmtData, icone, podeEditar, endereco, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
+import { ELEMENTOS, ELEMENTOS_LAB_EXTRA, COL, mesmaLiga, codigoRetornoDaCorrida, temAnalise } from '../calculo.js?v=2.0.1';
+import { lerLaudoOuAvisar } from '../laudo.js?v=2.0.1';
+import { criarCertificadosAuto, codigoRetornoDoCert, COL_CERTS } from '../../certificados/auto.js?v=2.0.1';
+import { S, C, ED, ligaDe, semMeta, ent, entNum, optLigas, fmtComp, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.1';
 
 const f = filtroDaTela('retornos', { chip: 'saldo', liga: '', q: '' });
 iniciarTela({ tela: 'retornos', trilha: ['Cálculo de Liga', 'Retornos'], desenhar });

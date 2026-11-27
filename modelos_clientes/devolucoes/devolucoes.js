@@ -1,10 +1,10 @@
 // =====================================================================
 //  modelos_clientes/devolucoes/devolucoes.js — lista das devoluções
 // =====================================================================
-import { esc, fmtData, icone } from '../../comum/casca.js?v=2.0.0';
-import { norm } from '../planilha.js?v=2.0.0';
-import { fmtDataHora } from '../folha_devolucao.js?v=2.0.0';
-import { S, filtros, url, iniciarTela, mostrar, bt, nomeCli, tagSit, DEV_STATUS } from '../base_mcli.js?v=2.0.0';
+import { esc, fmtData, icone } from '../../comum/casca.js?v=2.0.1';
+import { norm } from '../planilha.js?v=2.0.1';
+import { fmtDataHora } from '../folha_devolucao.js?v=2.0.1';
+import { S, filtros, url, iniciarTela, mostrar, bt, nomeCli, tagSit, DEV_STATUS } from '../base_mcli.js?v=2.0.1';
 
 iniciarTela({ menu: 'mcli-devolucoes', desenhar: paginaDevolucoes });
 

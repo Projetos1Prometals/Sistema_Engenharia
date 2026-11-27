@@ -1,9 +1,9 @@
 // =====================================================================
 //  calculo_liga/corridas/corridas.js — tela Corridas (lista)
 // =====================================================================
-import { esc, fmtKg, fmtData, icone, podeVer, filtroDaTela } from '../../comum/casca.js?v=2.0.0';
-import { mesmaLiga, conferir, numeroCorrida, statusCorrida, temAnalise } from '../calculo.js?v=2.0.0';
-import { S, C, cfg, ligaDe, optLigas, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.0';
+import { esc, fmtKg, fmtData, icone, podeVer, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
+import { mesmaLiga, conferir, numeroCorrida, statusCorrida, temAnalise } from '../calculo.js?v=2.0.1';
+import { S, C, cfg, ligaDe, optLigas, url, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.1';
 
 const f = filtroDaTela('corridas', { chip: 'todas', liga: '', q: '' });
 iniciarTela({ tela: 'corridas', trilha: ['Cálculo de Liga', 'Corridas'], desenhar });

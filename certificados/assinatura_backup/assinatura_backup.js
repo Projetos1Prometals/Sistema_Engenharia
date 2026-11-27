@@ -3,11 +3,11 @@
 //  Imagem da assinatura dos certificados, importação do backup do app antigo
 //  e cópia de segurança.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { aviso, janela, icone, baixarArquivo, endereco } from '../../comum/casca.js?v=2.0.0';
-import { COL as COL_LIGA } from '../../calculo_liga/calculo.js?v=2.0.0';
-import { clone, dateKey, upgradeCert } from '../folha_certificado.js?v=2.0.0';
-import { S, C, ED, COL, CFG_ID, assinatura, url, iniciarTela, aoMudarDados, uid, salvarPendente } from '../base_certificados.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { aviso, janela, icone, baixarArquivo, endereco } from '../../comum/casca.js?v=2.0.1';
+import { COL as COL_LIGA } from '../../calculo_liga/calculo.js?v=2.0.1';
+import { clone, dateKey, upgradeCert } from '../folha_certificado.js?v=2.0.1';
+import { S, C, ED, COL, CFG_ID, assinatura, url, iniciarTela, aoMudarDados, uid, salvarPendente } from '../base_certificados.js?v=2.0.1';
 
 iniciarTela({ trilha: ['Qualidade', 'Certificados', 'Assinatura e backup'], desenhar });
 

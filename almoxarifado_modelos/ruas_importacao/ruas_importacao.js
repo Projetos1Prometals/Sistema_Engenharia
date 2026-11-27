@@ -2,11 +2,11 @@
 //  almoxarifado_modelos/ruas_importacao/ruas_importacao.js — tela Ruas e importação
 //  Ruas do almoxarifado, importação da planilha Almoxarifado_Modelos e cópia de segurança.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { aviso, janela, esc, num, icone, hoje, baixarArquivo } from '../../comum/casca.js?v=2.0.0';
-import { COL, situacao, lerPosicao, posicoesDaRua } from '../regras.js?v=2.0.0';
-import { lerAlmoxarifado } from '../importar_planilha.js?v=2.0.0';
-import { S, C, ED, iniciarTela, aoMudarDados, somenteLeitura, semMeta } from '../base_modelos.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { aviso, janela, esc, num, icone, hoje, baixarArquivo } from '../../comum/casca.js?v=2.0.1';
+import { COL, situacao, lerPosicao, posicoesDaRua } from '../regras.js?v=2.0.1';
+import { lerAlmoxarifado } from '../importar_planilha.js?v=2.0.1';
+import { S, C, ED, iniciarTela, aoMudarDados, somenteLeitura, semMeta } from '../base_modelos.js?v=2.0.1';
 
 iniciarTela({ ver: ['ruas'], edita: 'ruas', menu: 'ruas', trilha: ['Almoxarifado modelos', 'Ruas e importação'], desenhar });
 

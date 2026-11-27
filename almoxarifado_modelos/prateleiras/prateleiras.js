@@ -2,9 +2,9 @@
 //  almoxarifado_modelos/prateleiras/prateleiras.js — tela Prateleiras (mapa)
 //  Onde está cada modelo; vaga livre clicada: pôr um modelo ou cadastrar um novo.
 // =====================================================================
-import { aviso, janela, esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.0';
-import { normCodigo, situacao, posicoesDaRua } from '../regras.js?v=2.0.0';
-import { S, C, ED, url, iniciarTela, aoMudarDados, kpi, somenteLeitura, evento, gravarModelo } from '../base_modelos.js?v=2.0.0';
+import { aviso, janela, esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
+import { normCodigo, situacao, posicoesDaRua } from '../regras.js?v=2.0.1';
+import { S, C, ED, url, iniciarTela, aoMudarDados, kpi, somenteLeitura, evento, gravarModelo } from '../base_modelos.js?v=2.0.1';
 
 const f = filtroDaTela('prateleiras', { q: '' });
 // pôr modelo numa vaga segue o "Editar" de Modelos

@@ -3,16 +3,16 @@
 //  na folha (salva sozinho ~0,7 s depois de parar de digitar).
 //  ?id=<id do certificado>   (&focar=certNo põe o cursor no campo)
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { definirTrilha, aviso, janela, esc, fmtData, icone, endereco, parametro, ir } from '../../comum/casca.js?v=2.0.0';
-import { acharLiga, numeroCorrida, temAnalise } from '../../calculo_liga/calculo.js?v=2.0.0';
-import { lerLaudoOuAvisar } from '../../calculo_liga/laudo.js?v=2.0.0';
-import { QALL, clone, abaFrom, setPath, fmtNum, parseNum, setQuimica, certHTML } from '../folha_certificado.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { definirTrilha, aviso, janela, esc, fmtData, icone, endereco, parametro, ir } from '../../comum/casca.js?v=2.0.1';
+import { acharLiga, numeroCorrida, temAnalise } from '../../calculo_liga/calculo.js?v=2.0.1';
+import { lerLaudoOuAvisar } from '../../calculo_liga/laudo.js?v=2.0.1';
+import { QALL, clone, abaFrom, setPath, fmtNum, parseNum, setQuimica, certHTML } from '../folha_certificado.js?v=2.0.1';
 import {
   S, C, ED, COL, LOGO, assinatura, url, iniciarTela, aoMudarDados, norm, fmtQ, uid, nextOrdem, corridaDe, nomeCorrida, descCorrida,
   codigoRetornoDoCert, retornoDoCert, sincronizarQuimica, marcarManual, quimicaDe, conferir,
   pendentes, agendarSalvar, salvarPendente, gravar, estadoSalvo, abrir, ESCALA_MIN, ALTURA_UTIL_PX, prepararImpressao, imprimir,
-} from '../base_certificados.js?v=2.0.0';
+} from '../base_certificados.js?v=2.0.1';
 
 const ID = parametro('id');
 iniciarTela({

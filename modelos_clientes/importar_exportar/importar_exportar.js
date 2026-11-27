@@ -3,19 +3,19 @@
 //  Clientes e modelos por planilha (Excel/CSV/colado), IPs de cliente da
 //  Instrução de Processo e a saída em planilha (.xlsx) ou cópia (.json).
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { aviso, janela, esc, fmtData, icone, hoje, baixarArquivo } from '../../comum/casca.js?v=2.0.0';
-import { fmtDataHora } from '../folha_devolucao.js?v=2.0.0';
-import { enviarFotos } from '../fotos.js?v=2.0.0';
-import { entrarInstrucao, ipsDeCliente, fotoDaIP, FOTOS_IP } from '../instrucao.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { aviso, janela, esc, fmtData, icone, hoje, baixarArquivo } from '../../comum/casca.js?v=2.0.1';
+import { fmtDataHora } from '../folha_devolucao.js?v=2.0.1';
+import { enviarFotos } from '../fotos.js?v=2.0.1';
+import { entrarInstrucao, ipsDeCliente, fotoDaIP, FOTOS_IP } from '../instrucao.js?v=2.0.1';
 import {
   CAMPOS_IMPORTACAO, autoMapear, paraData, textoCelula, arrumarCep, arrumarCnpj, separarTitulos,
   lerArquivoPlanilha, lerTextoColado, montarXlsx, norm, digitos,
-} from '../planilha.js?v=2.0.0';
+} from '../planilha.js?v=2.0.1';
 import {
   S, C, ED, COL, STATUS, DEV_STATUS, EV, iniciarTela, mostrar, registrarAcoes, redesenhar,
   cli, prefixo, autorDe, novoId, agoraISO, proximoCodigo, semMeta, eventosOrdenados,
-} from '../base_mcli.js?v=2.0.0';
+} from '../base_mcli.js?v=2.0.1';
 
 const imp = { tipo: 'modelos', titulos: [], linhas: [], mapa: {}, nome: '', rodando: false, progresso: 0, resultado: null };
 registrarAcoes({

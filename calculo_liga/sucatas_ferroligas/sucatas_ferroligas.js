@@ -2,10 +2,10 @@
 //  calculo_liga/sucatas_ferroligas/sucatas_ferroligas.js — tela Sucatas e ferroligas
 //  Teor de cada elemento (%) usado no cálculo da carga e o código MP do NW.
 // =====================================================================
-import * as banco from '../../comum/banco.js?v=2.0.0';
-import { aviso, janela, esc, num, fmt, icone } from '../../comum/casca.js?v=2.0.0';
-import { ELEMENTOS, COL, normLiga } from '../calculo.js?v=2.0.0';
-import { S, C, ED, sucatas, ferroligas, semMeta, ent, entNum, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.0';
+import * as banco from '../../comum/banco.js?v=2.0.1';
+import { aviso, janela, esc, num, fmt, icone } from '../../comum/casca.js?v=2.0.1';
+import { ELEMENTOS, COL, normLiga } from '../calculo.js?v=2.0.1';
+import { S, C, ED, sucatas, ferroligas, semMeta, ent, entNum, iniciarTela, aoMudarDados } from '../base_liga.js?v=2.0.1';
 
 iniciarTela({ tela: 'materiais', trilha: ['Cálculo de Liga', 'Sucatas e ferroligas'], desenhar });
 

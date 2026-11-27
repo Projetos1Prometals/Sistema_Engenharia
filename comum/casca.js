@@ -2,9 +2,9 @@
 //  comum/casca.js — barra lateral, topo, login obrigatório e ajudantes
 //  de tela (avisos, janelas, ícones, formatação) usados por todos os módulos.
 // =====================================================================
-import * as banco from './banco.js?v=2.0.0';
+import * as banco from './banco.js?v=2.0.1';
 
-export const VERSAO = '2.0.0';
+export const VERSAO = '2.0.1';
 
 // ---------- quem acessa o quê (tela Usuários e acessos) ----------
 // Cada usuário tem um documento em eng_acessos (id = e-mail em minúsculas):
@@ -37,9 +37,9 @@ export const TELAS_MODELOS = ['mapa', 'modelos', 'comercial', 'ruas'];
 // Para passar a valer o que está em Usuários e acessos: mudar para true (e publicar o firestore.rules).
 export const RESTRINGIR = false;
 
-// Pedido do usuário (2026-11-27): Modelos de clientes fora do ar por enquanto (some do menu, da
-// Visão geral e a página mostra "sem acesso", inclusive para o administrador). Para voltar: tirar daqui.
-export const TELAS_DESLIGADAS = ['modelosClientes'];
+// Telas fora do ar (somem do menu e da Visão geral; a página mostra "sem acesso", até para o administrador).
+// Ex.: ['modelosClientes'] desliga os Modelos de clientes sem apagar nada.
+export const TELAS_DESLIGADAS = [];
 
 let ACESSO = null;   // { email, admin, telas }
 export const ehAdmin = () => !!(ACESSO && ACESSO.admin);

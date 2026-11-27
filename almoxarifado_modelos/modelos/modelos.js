@@ -1,9 +1,9 @@
 // =====================================================================
 //  almoxarifado_modelos/modelos/modelos.js — tela Modelos (lista)
 // =====================================================================
-import { esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.0';
-import { normCodigo, situacao, lerPosicao } from '../regras.js?v=2.0.0';
-import { S, C, ED, url, iniciarTela, aoMudarDados, tagSit, fmtValor, kpi, somenteLeitura } from '../base_modelos.js?v=2.0.0';
+import { esc, icone, filtroDaTela } from '../../comum/casca.js?v=2.0.1';
+import { normCodigo, situacao, lerPosicao } from '../regras.js?v=2.0.1';
+import { S, C, ED, url, iniciarTela, aoMudarDados, tagSit, fmtValor, kpi, somenteLeitura } from '../base_modelos.js?v=2.0.1';
 
 const f = filtroDaTela('modelos', { chip: 'todos', rua: '', q: '' });
 iniciarTela({ ver: ['modelos'], edita: 'modelos', menu: 'modelos', trilha: ['Almoxarifado modelos', 'Modelos'], desenhar });
