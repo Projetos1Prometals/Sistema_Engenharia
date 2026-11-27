@@ -17,14 +17,18 @@ todos os usuários liberados veem e editam os mesmos dados, em tempo real.
 | Pasta / arquivo | O que é |
 |---|---|
 | `index.html` | Entrada: login e visão geral |
+| `404.html` | Leva os endereços antigos (antes de cada tela virar página própria) para a tela nova |
 | `config.js` | **Configuração do Firebase**: o único arquivo que precisa ser editado |
 | `firestore.rules` | Regras de segurança (colar no Firebase). Leem os acessos da tela **Usuários e acessos** |
-| `usuarios/` | Tela **Usuários e acessos** (só o administrador): quem vê e quem edita cada tela |
-| `comum/` | Partes usadas por todos os módulos: visual (`tema.css`), menu (`casca.js`), banco de dados (`banco.js`), logo |
-| `liga/` | Módulo Cálculo de Liga: tela (`index.html`, `liga.css`, `liga.js`), contas (`calculo.js`), importação da planilha (`importar.js`), dados iniciais (`dados-iniciais.js`) |
-| `modelos/` | Módulo Almoxarifado Prometals: telas (`index.html`, `modelos.css`, `modelos.js`), regras (`regras.js`), importação da planilha Almoxarifado_Modelos (`importar.js`) |
-| `modelos-clientes/` | Módulo Modelos de clientes: telas (`mcli.js`, `mcli.css`), documento de devolução (`folha.js`, `logo-doc.jpg`), fotos (`fotos.js`), planilhas (`planilha.js`) |
-| `certificados/` | Módulo Certificados: folha A4 (`folha.js`), telas (`index.html`, `certificados.css`, `certificados.js`) |
+| `comum/` | Partes usadas por todos os módulos: visual (`tema.css`), menu (`casca.js`), banco de dados (`banco.js`), visão geral (`inicio.js`), logo |
+| `calculo_liga/` | Módulo Cálculo de Liga. Uma pasta por tela: `corridas/`, `ficha_corrida/` (com o boletim), `amostras_dia/`, `retornos/`, `ligas_normas/`, `sucatas_ferroligas/`. Na pasta do módulo: base das telas (`base_liga.js`), estilos comuns (`calculo_liga.css`), contas (`calculo.js`), PDF do laboratório (`laudo.js`), importação das planilhas (`importar_planilhas.js`), etiquetas (`etiquetas_amostras.js`), dados iniciais (`dados_iniciais.js`) |
+| `almoxarifado_modelos/` | Módulo Almoxarifado Prometals: `prateleiras/`, `modelos/`, `ficha_modelo/`, `ruas_importacao/`; base (`base_modelos.js`), regras (`regras.js`), importação da planilha Almoxarifado_Modelos (`importar_planilha.js`) |
+| `modelos_prometals/` | Lista comercial dos refinadores (`lista_comercial/`), com a base do Almoxarifado |
+| `modelos_clientes/` | Módulo Modelos de clientes (desligado por enquanto): `painel/`, `modelos/`, `ficha_modelo/`, `devolucoes/`, `devolucao/`, `clientes/`, `importar_exportar/`, `configuracoes/`, `produto/`; base (`base_mcli.js`), documento de devolução (`folha_devolucao.js`, `logo_doc.jpg`), fotos (`fotos.js`), planilhas (`planilha.js`) |
+| `certificados/` | Módulo Certificados: `lista/`, `certificado/`, `assinatura_backup/`; base (`base_certificados.js`), folha A4 (`folha_certificado.js`), certificado automático (`auto.js`) |
+| `sistema/` | `configuracoes/` (forno, numeração, importação das planilhas, cópia de segurança) e `usuarios_acessos/` (só o administrador: quem vê e quem edita cada tela) |
+
+Cada tela é uma página própria, numa pasta com três arquivos: `index.html`, `<tela>.css` e `<tela>.js`.
 
 ## 1. Colocar no GitHub
 
@@ -114,7 +118,7 @@ Os modelos que os clientes deixam na empresa (menu **Modelos → Modelos de clie
 - **Clientes**: dados que saem no "ID Cliente" do documento.
 - **Importar / Exportar**: modelos e clientes por planilha (Excel, CSV ou colando do Excel) e a planilha completa (.xlsx) ou a cópia (.json).
 - **Configurações**: dados da T.M Gastão (cabeçalho do documento), emissor padrão e o texto da declaração.
-- **Consulta por código do produto**: `…/modelos-clientes/index.html#/produto/<código>` mostra a peça (descrição, desenho, cliente, liga, partes, material, localização, situação) e as fotos frente/traseira/macho. A Instrução de Processo vai abrir esta página.
+- **Consulta por código do produto**: `…/modelos_clientes/produto/index.html?codigo=<código>` mostra a peça (descrição, desenho, cliente, liga, partes, material, localização, situação) e as fotos frente/traseira/macho. A Instrução de Processo vai abrir esta página.
 
 ## Como funcionam os Certificados
 

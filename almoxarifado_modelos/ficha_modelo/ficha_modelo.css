@@ -1,0 +1,4 @@
+/* almoxarifado_modelos/ficha_modelo/ficha_modelo.css — ficha do modelo (desenho em PDF) */
+.arquivo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--linha2);border-radius:8px;background:var(--card2)}
+.arquivo > .ic{width:26px;height:26px;color:var(--lar)}
+.arquivo .cresce{display:flex;flex-direction:column;min-width:160px}

@@ -1,0 +1,7 @@
+/* =====================================================================
+   almoxarifado_modelos/almoxarifado_modelos.css — estilos comuns às telas dos
+   Modelos da Prometals (cada tela tem o seu .css na própria pasta)
+   ===================================================================== */
+.txt-verm{color:var(--verm)}
+.campo small{font-weight:500;text-transform:none;letter-spacing:0}
+input.ent:disabled,select.ent:disabled,textarea.ent:disabled{opacity:1;color:var(--txt);background:var(--card2);cursor:default}

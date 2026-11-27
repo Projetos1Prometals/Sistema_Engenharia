@@ -4,12 +4,36 @@ Site estático (HTML + JS em módulos, sem build) publicado no GitHub Pages; dad
 (Firestore) ou, sem `config.js` preenchido, em modo local (localStorage). Textos da tela e do código
 em português. Visão geral e passo a passo de instalação: `LEIA-ME.md`.
 
-## Cálculo de Liga (`liga/`)
-- `calculo.js`: contas sem tela (carga, composição estimada, saldos dos retornos).
-- `liga.js`: telas e o boletim impresso (`htmlBoletim`); `liga.css`: telas e impressão.
-- Ao mudar `calculo.js`, `liga.js` ou `liga.css`, suba o `?v=` em `liga/index.html` e nos `import`
-  de `calculo.js` (em `liga.js` e `importar.js`) e a `VERSAO` em `comum/casca.js`, para o navegador
-  não misturar arquivos novos com antigos do cache.
+## Estrutura (pedido do usuário, 2026-11-27): uma pasta por módulo, uma pasta por tela, nomes em snake_case
+- Módulo = pasta (as seções do menu): `calculo_liga/`, `almoxarifado_modelos/`, `modelos_prometals/`, `modelos_clientes/`,
+  `certificados/`, `sistema/`. Partes de todos: `comum/` (`casca.js`, `banco.js`, `tema.css`, `inicio.js`). Raiz: `index.html`
+  (login + Visão geral), `404.html`, `config.js`.
+- **Cada tela é uma página própria**: `<módulo>/<tela>/` com `index.html`, `<tela>.css` e `<tela>.js` (ex.:
+  `calculo_liga/corridas/corridas.js`). Ficha/registro abre por parâmetro: `ficha_corrida/index.html?id=…`,
+  `certificado/?id=…`, `ficha_modelo/?id=…` (novo: sem id; `?pos=K25`), `devolucao/?id=…`, `produto/?codigo=…`,
+  `certificados/lista/?novo=<id da corrida>` (abre "Novo certificado").
+- Na pasta do módulo: `base_<módulo>.js` (carrega os dados, confere o acesso — `iniciarTela({…, desenhar})` — e os ajudantes
+  comuns; a tela registra em `aoMudarDados(fn)` o que refazer quando o banco muda), `<módulo>.css` (estilos comuns às telas)
+  e os arquivos sem tela (`calculo.js`, `regras.js`, `folha_certificado.js`…). Endereço de outra tela: `url('tela', {id})`
+  da base, ou `endereco('modulo/tela', params)` de `casca.js`. Nomes de pastas e arquivos em snake_case; dentro do JS,
+  camelCase (padrão do JavaScript).
+- Trocar de página logo depois de gravar: use `ir(url)` de `casca.js` (espera a gravação, até 1,5 s); links clicados com
+  gravação em andamento esperam sozinhos. Filtros das listas: `filtroDaTela()` (lembrados na aba, sessionStorage).
+- `404.html`: o GitHub Pages mostra para endereço inexistente; leva os endereços antigos (`liga/index.html#/corridas`,
+  `modelos-clientes/index.html#/produto/<código>`…) e a pasta do módulo sozinha para a tela nova.
+- Tela nova: criar a pasta com os 3 arquivos (copiar o `index.html` de outra tela do módulo), item em `MENU` (`casca.js`)
+  e, se tiver permissão própria, em `TELAS`.
+
+## Versão (cache do navegador)
+- **Um número só** para tudo: `VERSAO` em `comum/casca.js` = o `?v=` de **todos** os `import`, `<script>` e `<link>`
+  (hoje 2.0.0). Ao mudar qualquer .js/.css, suba a versão em todos de uma vez
+  (`sed -i -E "s/\?v=[0-9]+\.[0-9]+\.[0-9]+/?v=X.Y.Z/g"` nos .js/.html), para o navegador não misturar arquivos novos com
+  antigos do cache (e `casca.js`/`banco.js` não virarem duas cópias, o que quebra o acesso carregado).
+
+## Cálculo de Liga (`calculo_liga/`)
+- `calculo.js`: contas sem tela (carga, composição estimada, saldos dos retornos). `base_liga.js`: dados e ajudantes.
+- Telas: `corridas/`, `ficha_corrida/` (ficha + boletim impresso `htmlBoletim` + `retornoAutomatico()`), `amostras_dia/`,
+  `retornos/`, `ligas_normas/`, `sucatas_ferroligas/`. Configurações do módulo: `sistema/configuracoes/` (usa `base_liga.js`).
 
 ### Regra da recarga do retorno
 Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
@@ -23,7 +47,7 @@ Cada item de `corrida.retornos` é `{ codigo, kg, recarga }`:
   apagar o Solicitado volta ao automático). Aviso em vermelho se Solicitado + Recarga passar do disponível.
 - Ex.: retorno com 370 kg, recarga 80 → Solicitado 290; a carga soma 290; o saldo final é 0.
 
-### Retorno automático (`retornoAutomatico()` em `liga.js`)
+### Retorno automático (`retornoAutomatico()` em `ficha_corrida/ficha_corrida.js`)
 - Toda corrida **do sistema** (não as importadas) gera/atualiza o seu retorno ao ser salva: código
   `ref-anual-LIGA` (liga com sigla entre parênteses usa só a sigla: "A-532 (FB)" → `34-227-FB`, `siglaLiga()`), `kgVerificado` 0 até pesar (tela Retornos, filtro "Sem peso"), análise = lida do PDF
   do laboratório **no retorno** (vale mais que `corrida.real`, que só existe nas corridas antigas importadas), `auto: true`, `corridaId`. O código fica em `corrida.retornoGerado`.
@@ -48,21 +72,21 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - Sequência da Carga Metálica: Retorno, Sucata, Ligas; na frente de cada linha, o código MP do NW
   daquele material (na mesma linha, não como legenda solta).
 - Sucata: uma linha fixa por sucata do cadastro. Ligas: linhas fixas na ordem da planilha
-  (`BOL_LIGAS` em `liga.js`: 1 Fe Si … 12 Tungstênio, 13 Fe Mn B/C). "-" quando não usadas.
+  (`BOL_LIGAS` em `ficha_corrida.js`: 1 Fe Si … 12 Tungstênio, 13 Fe Mn B/C). "-" quando não usadas.
   O Fe Mn B/C **não** vai na área da sucata (na planilha só ficava lá por falta de espaço).
 - Rastreio = FS, sempre com o prefixo "FS-". Ordem Produção = OPs.
 - Não mudar a ordem nem o layout sem pedido.
 
-### Amostras do dia (`#/amostras`, `amostras.js`)
+### Amostras do dia (`calculo_liga/amostras_dia/`, `etiquetas_amostras.js`)
 - Com as corridas de uma data: **etiqueta do saquinho** das amostras (10 × 5 cm; corrida, material, data;
   até 4 corridas por etiqueta), **etiqueta de cada retorno** (meia folha A4, duas por folha, linha tracejada para cortar — ou, marcando "Retornos também em etiqueta 10 × 5", junto com as do saquinho; corrida, material, data, "Peso:" em
   branco, COR = `liga.cor` cadastrada em Ligas e normas ou, sem ela, a tabela `CORES_RETORNO` de
-  `amostras.js`, copiada da folha "Cores (retorno)" da fundição; 310 e VC-131 = tambor de retorno de terceiro) e o **formulário A4 do laboratório Priner**
+  `etiquetas_amostras.js`, copiada da folha "Cores (retorno)" da fundição; 310 e VC-131 = tambor de retorno de terceiro) e o **formulário A4 do laboratório Priner**
   (LT-FO-023; dados fixos em `config.liga.priner`, botão "Dados do formulário").
 - Imprime com páginas nomeadas (`@page etiqueta` 100×50 mm, `@page folhaA4`, `@page folhaRetorno` = A4 sem margem);
   saquinho, retornos e formulário em botões separados (impressoras diferentes). Formato das fotos/docx que o usuário mandou — não mudar sem pedido.
 
-### Importação das planilhas (Configurações) — `importar.js`
+### Importação das planilhas (Sistema → Configurações) — `importar_planilhas.js`
 - **Calculo de Ligas (.xlsm)** → `lerPlanilha`: ligas, retornos (Dados Retorno), corridas da aba
   Banco de dados (ids `planilha-NNNN`, nº anual deduzido) e contadores.
 - **CONTROLE_CORRIDA_ENGENHARIA (.xlsx)** → `lerControle`: abas "Controle Corrida AAAA".
@@ -77,9 +101,10 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
 - As planilhas ficam em `planilhas_dados/`, que está no `.gitignore`: o repositório é público,
   **nunca** enviar planilhas para o GitHub.
 
-## Almoxarifado Prometals (`modelos/`) — modelos da própria Prometals
+## Almoxarifado Prometals (`almoxarifado_modelos/` + `modelos_prometals/lista_comercial/`) — modelos da própria Prometals
 - No menu, seção Modelos (pedido do usuário): "Almoxarifado modelos" (Prateleiras, Modelos, Ruas abrem embaixo), "Modelos Prometals" (Lista comercial embaixo) e "Modelos de clientes".
-- `regras.js` (sem tela), `modelos.js` (telas), `importar.js` (planilha Almoxarifado_Modelos), `modelos.css`.
+- `regras.js` (sem tela), `base_modelos.js`, `importar_planilha.js` (planilha Almoxarifado_Modelos). Telas: `prateleiras/`,
+  `modelos/`, `ficha_modelo/`, `ruas_importacao/`; a Lista comercial fica em `modelos_prometals/lista_comercial/` (usa a mesma base).
 - Coleções: `eng_modelos` (id = código normalizado por `idModelo()`), `eng_ruas` (id = letra).
 - **Código não pode repetir** (o id sai do código; maiúsculas/espaços não contam). Na importação, o
   repetido não entra e vai para os avisos. **Uma posição = um modelo.**
@@ -91,14 +116,14 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   Modelos e a ficha seguem `modelos`; Ruas e importação segue `ruas`; Lista comercial é só ver. `MAN` = `manutencao`
   (no Firestore, só grava se a mudança tocar apenas `situacao`, `historico`, `_em`, `_por`).
 
-## Modelos de clientes (`modelos-clientes/`) — modelos que os clientes deixam na empresa
+## Modelos de clientes (`modelos_clientes/`) — modelos que os clientes deixam na empresa
 - **Desligado por enquanto** (pedido do usuário, 2026-11-27): `TELAS_DESLIGADAS = ['modelosClientes']` em `casca.js`
   → some do menu e da Visão geral, e a página mostra "sem acesso" (até para o admin). Para voltar: esvaziar a lista.
 - Porte do app antigo (artifact do Claude, `app-modelos-clientes/`, no `.gitignore`, só estudo). Mesmas telas e regras:
-  Painel, Modelos (+ ficha `#/modelo/<id>`), Devoluções (+ `#/devolucao/<id>`), Clientes, Importar / Exportar, Configurações.
+  `painel/`, `modelos/` (+ `ficha_modelo/?id=`), `devolucoes/` (+ `devolucao/?id=`), `clientes/`, `importar_exportar/`, `configuracoes/`.
   Os dados do app antigo eram de teste: **não** foram migrados.
-- `mcli.js` (telas), `folha.js` (documento de devolução A4 — layout do app antigo, não mudar sem pedido), `fotos.js`,
-  `planilha.js` (ler Excel/CSV/colado, montar .xlsx), `mcli.css` (inclui a impressão), `logo-doc.jpg` (logo do documento).
+- `base_mcli.js` (dados, janelas e ações `data-acao` comuns; a tela soma as suas com `registrarAcoes()`), `folha_devolucao.js` (documento de devolução A4 — layout do app antigo, não mudar sem pedido), `fotos.js`,
+  `planilha.js` (ler Excel/CSV/colado, montar .xlsx), `modelos_clientes.css`, `logo_doc.jpg` (logo do documento; a impressão fica em `devolucao/devolucao.css`).
 - Coleções: `eng_clientes`, `eng_mcli_modelos`, `eng_mcli_eventos`, `eng_mcli_devolucoes`; config (dados da T.M Gastão,
   texto da declaração, prefixos) em `eng_config/modelosClientes`. Ids aleatórios; códigos `MOD-0001` / `DEV-0001`
   (`proximoCodigo()`, prefixo da config). Código do modelo não repete.
@@ -113,9 +138,9 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   em `eng_arquivos`; local: IndexedDB). Eventos e devolução guardam só os ids. Ao remover, o arquivo só é apagado se
   nenhum documento de devolução usar a foto (`apagarFotos()`).
 - **Código do produto** (`codProduto`, o mesmo do NW e da Instrução de Processo) e a página de consulta
-  **`#/produto/<código>`** (descrição, referência/desenho, cliente, liga, partes, material, localização, situação, fotos
+  **`produto/index.html?codigo=<código>`** (descrição, referência/desenho, cliente, liga, partes, material, localização, situação, fotos
   frente/traseira/macho). A Instrução de Processo vai abrir
-  `…/modelos-clientes/index.html#/produto/<código>` (quem abre precisa de login e de "Modelos de clientes" ao menos "Só ver").
+  `…/modelos_clientes/produto/index.html?codigo=<código>` (o endereço antigo `…/modelos-clientes/index.html#/produto/<código>` ainda funciona pelo `404.html`; quem abre precisa de login e de "Modelos de clientes" ao menos "Só ver").
 - **Da Instrução de Processo** (`instrucao.js`, botão em Importar / Exportar): pede o login da Instrução (Supabase,
   sessão só na memória), lê `kv` (`ip:<n>:data` + `cfg:ips`) e traz as IPs com `peca.destino` = "Retorno para o cliente"
   (ou o antigo "Volta para o dono"): cliente (criado pelo nome), `codProduto`, descrição, liga, `ip` = nº, e as fotos
@@ -125,10 +150,11 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   comercial2@ (e o admin) editam: `semearAcessos()` grava o comercial2@ com só `modelosClientes: 'editar'`.
 
 ## Certificados (`certificados/`)
-- `folha.js` (a folha A4 — layout copiado do app antigo / planilha, 12 colunas; não mudar sem pedido),
-  `certificados.js` (telas), `certificados.css`.
+- Telas: `lista/` (busca, novo certificado, retornos sem certificado), `certificado/?id=` (a folha), `assinatura_backup/`.
+- `folha_certificado.js` (a folha A4 — layout copiado do app antigo / planilha, 12 colunas; não mudar sem pedido),
+  `base_certificados.js` (dados, vínculo com o retorno, gravação automática, impressão), `certificados.css` (a folha e a impressão).
 - Coleção `eng_certificados` (id do app antigo mantido na importação); assinatura em `eng_config/certificado`.
-- **Mais de uma folha** (`folhasDoCert()` em `certificados.js`, `certContinuacao()` em `folha.js`): se não couber
+- **Mais de uma folha** (`folhasDoCert()` em `base_certificados.js`, `certContinuacao()` em `folha_certificado.js`): se não couber
   numa A4 com escala ≥ 0,9, a folha 1 sai completa com os itens que cabem + "Continua na folha seguinte" e o resto
   vai para folhas de continuação (cabeçalho, identificação, itens, assinatura, rodapé). "Página" vira "1 de N"
   quando o campo está no formato "N de N". A assinatura é a imagem de `eng_config/certificado` e sai em todas as folhas.
@@ -165,13 +191,15 @@ Não há Node nem Python na máquina. Para testar, serve-se a pasta com um servi
 (ex.: `HttpListener` em PowerShell) e usa-se o Chrome headless (`--dump-dom`, `--print-to-pdf`).
 Com `--virtual-time-budget` o IndexedDB (fotos, PDFs no modo local) **trava**: para isso, abrir o Chrome com
 `--remote-debugging-port` e ler/printar pela DevTools (WebSocket em PowerShell), em tempo real.
+Para o modo local no teste, o servidor devolve um `config.js` vazio (o de verdade tem o Firebase). O servidor também
+deve devolver o `404.html` para endereço inexistente, como o GitHub Pages, para testar os endereços antigos.
 
 ## GitHub
 Perguntar ao usuário antes de enviar qualquer coisa para o GitHub.
 
-## Usuários e acessos (`usuarios/`, `comum/casca.js`, `firestore.rules`)
+## Usuários e acessos (`sistema/usuarios_acessos/`, `comum/casca.js`, `firestore.rules`)
 - **Por enquanto desligado** (pedido do usuário, 2026-11-26): `RESTRINGIR = false` em `casca.js` → todo não-admin
-  vê e edita tudo (nível máximo de cada tela), menos Usuários e acessos; no Firebase vale o `firestore-todos.rules`
+  vê e edita tudo (nível máximo de cada tela), menos Usuários e acessos; no Firebase vale o `firestore_todos.rules`
   (quem tem doc em `eng_acessos` lê/grava todas as `eng_*`). Para restringir: `RESTRINGIR = true` + publicar o `firestore.rules`.
 - Pedido do usuário: controlar por **tela** quem vê e quem edita. Coleção `eng_acessos`, id = e-mail em minúsculas:
   `{ email, nome, telas: { corridas: 'editar', retornos: 'ver', … } }` (tela fora da lista = sem acesso).
@@ -196,5 +224,5 @@ Perguntar ao usuário antes de enviar qualquer coisa para o GitHub.
   `certificadoAuto` no retorno). Mudou o arquivo → o usuário tem que colar no Firebase e publicar.
 - `banco.criarLogin()` cria o login de outra pessoa numa 2ª instância do Firebase (não derruba a sessão do admin).
 - Teste no modo local como outra pessoa: `localStorage.setItem('pmt_simular', '<email>')` + o doc em `pmt_local:eng_acessos`.
-- `casca.js` e `banco.js` são importados com `?v=` (todos os módulos com a **mesma** versão, senão viram duas cópias
-  e o acesso carregado não é compartilhado). Ao mudá-los, suba o `?v=` em todos os imports.
+- `casca.js` e `banco.js` são importados com `?v=` (todos com a **mesma** versão — ver "Versão" no começo —, senão viram duas cópias
+  e o acesso carregado não é compartilhado).

@@ -1,0 +1,21 @@
+/* =====================================================================
+   calculo_liga/calculo_liga.css — estilos comuns às telas do Cálculo de Liga
+   (cada tela tem o seu .css na própria pasta)
+   ===================================================================== */
+.txt-verm{color:var(--verm)} .txt-amar{color:var(--amar)} .txt-verde{color:var(--verde)} .txt-az{color:var(--az)}
+td.txt-verm{font-weight:700} td.txt-amar{font-weight:700}
+
+/* cores BAIXO / OK / ALTO (iguais à planilha) */
+.st-baixo{background:var(--amar-bg);color:var(--amar)!important;font-weight:700}
+.st-ok{background:var(--verde-bg);color:var(--verde)!important;font-weight:700}
+.st-alto{background:var(--verm-bg);color:var(--verm)!important;font-weight:700}
+.legenda{display:flex;gap:6px}
+.legenda i{font-style:normal;font-size:10.5px;padding:2px 8px;border-radius:4px;letter-spacing:.05em}
+
+.tab-comp th,.tab-comp td{padding:7px 6px}
+.tab-comp td:first-child{white-space:nowrap;padding-left:12px}
+.tab-comp input.ent{padding:6px 5px;text-align:center;min-width:54px}
+.tab-comp input.ent[data-k="desc"]{text-align:left}
+.opcao{display:block;padding:10px 12px;border:1px solid var(--linha);border-radius:8px;margin-bottom:8px;cursor:pointer}
+.opcao input{margin-right:6px}
+h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}

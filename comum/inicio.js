@@ -1,9 +1,18 @@
 // =====================================================================
 //  comum/inicio.js — tela de entrada (login) e visão geral dos módulos
 // =====================================================================
-import * as banco from './banco.js?v=1.7.4';
-import { montar, icone, esc, aviso, aplicarTema, podeVer, TELAS_LIGA, TELAS_MODELOS, ADMINS } from './casca.js?v=1.7.4';
-import { COL, saldos, statusCorrida, acharLiga } from '../liga/calculo.js?v=1.4.0';
+import * as banco from './banco.js?v=2.0.0';
+import { montar, icone, esc, aviso, aplicarTema, podeVer, TELAS_LIGA, TELAS_MODELOS, ADMINS } from './casca.js?v=2.0.0';
+import { COL, saldos, statusCorrida, acharLiga } from '../calculo_liga/calculo.js?v=2.0.0';
+
+// Primeira tela de cada módulo que a pessoa pode ver (o cartão do módulo abre nela)
+const PAG_LIGA = {
+  corridas: 'calculo_liga/corridas/index.html', amostras: 'calculo_liga/amostras_dia/index.html', retornos: 'calculo_liga/retornos/index.html',
+  ligas: 'calculo_liga/ligas_normas/index.html', materiais: 'calculo_liga/sucatas_ferroligas/index.html', config: 'sistema/configuracoes/index.html',
+};
+const PAG_MODELOS = {
+  mapa: 'almoxarifado_modelos/prateleiras/index.html', modelos: 'almoxarifado_modelos/modelos/index.html', ruas: 'almoxarifado_modelos/ruas_importacao/index.html',
+};
 
 aplicarTema();
 const est = await banco.iniciar();
@@ -65,11 +74,11 @@ async function visaoGeral() {
     ${algum ? '' : `<div class="faixa lar">Seu usuário ainda não tem acesso a nenhuma tela. Peça para a Engenharia (${esc(ADMINS[0])}) liberar em <b>Usuários e acessos</b>.</div>`}
     <div class="kpis" id="kpis"></div>
     <div class="modulos">
-      ${!liga ? '' : `<a class="modulo" href="liga/index.html#/${liga}">${icone('chama')}<h3>Cálculo de Liga</h3><p>Corridas, carga do forno, retornos com saldo, boletim para o forneiro e resultado do laboratório.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
-      ${!modelos ? '' : `<a class="modulo" href="modelos/index.html#/${modelos === 'modelos' ? 'lista' : modelos}">${icone('grade')}<h3>Almoxarifado modelos</h3><p>Modelos da Prometals: prateleiras, ruas, manutenção, histórico e desenho (PDF).</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
-      ${!podeVer('comercial') ? '' : `<a class="modulo" href="modelos/index.html#/comercial">${icone('documento')}<h3>Modelos Prometals</h3><p>Lista comercial dos refinadores: dados técnicos e situação no estoque.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
-      ${!podeVer('modelosClientes') ? '' : `<a class="modulo" href="modelos-clientes/index.html#/painel">${icone('cubo')}<h3>Modelos de clientes</h3><p>Modelos que os clientes deixam na empresa: chegada com NF, fotos, consertos e o documento de devolução.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
-      ${!podeVer('certificados') ? '' : `<a class="modulo" href="certificados/index.html#/lista">${icone('certificado')}<h3>Certificados</h3><p>Certificado de qualidade com a análise química da corrida: busca por OP, edição na folha, impressão A4.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!liga ? '' : `<a class="modulo" href="${banco.raiz(PAG_LIGA[liga])}">${icone('chama')}<h3>Cálculo de Liga</h3><p>Corridas, carga do forno, retornos com saldo, boletim para o forneiro e resultado do laboratório.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!modelos ? '' : `<a class="modulo" href="${banco.raiz(PAG_MODELOS[modelos])}">${icone('grade')}<h3>Almoxarifado modelos</h3><p>Modelos da Prometals: prateleiras, ruas, manutenção, histórico e desenho (PDF).</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!podeVer('comercial') ? '' : `<a class="modulo" href="modelos_prometals/lista_comercial/index.html">${icone('documento')}<h3>Modelos Prometals</h3><p>Lista comercial dos refinadores: dados técnicos e situação no estoque.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!podeVer('modelosClientes') ? '' : `<a class="modulo" href="modelos_clientes/painel/index.html">${icone('cubo')}<h3>Modelos de clientes</h3><p>Modelos que os clientes deixam na empresa: chegada com NF, fotos, consertos e o documento de devolução.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
+      ${!podeVer('certificados') ? '' : `<a class="modulo" href="certificados/lista/index.html">${icone('certificado')}<h3>Certificados</h3><p>Certificado de qualidade com a análise química da corrida: busca por OP, edição na folha, impressão A4.</p><div class="rod"><span class="tag ok">Pronto</span></div></a>`}
       ${!podeVer('instrucao') ? '' : `<a class="modulo" href="https://projetos1prometals.github.io/instrucao-processo-prometals/" target="_blank" rel="noopener">${icone('prancheta')}<h3>Instrução de Processo</h3><p>Instruções por produto, com fotos, para a produção. Abre o app atual numa aba nova.</p><div class="rod"><span class="tag info">App separado</span></div></a>`}
     </div>`;
   if (!podeVer('corridas') && !podeVer('retornos')) return;   // números do Cálculo de Liga só para quem vê essas telas
@@ -81,11 +90,11 @@ async function visaoGeral() {
     const aguardando = dados.corridas.filter(c => c.origem !== 'planilha' && statusCorrida(c, acharLiga(dados.ligas, c.liga), null).cod === 'aguardando' && !c.retornoGerado);
     const ano = String(new Date().getFullYear());
     C.querySelector('#kpis').innerHTML = (podeVer('corridas') ? `
-      <a class="kpi" href="liga/index.html#/corridas" style="text-decoration:none;color:inherit"><b>${dados.corridas.filter(c => String(c.data || '').startsWith(ano)).length}</b><span>Corridas em ${ano}</span></a>
-      <a class="kpi amar" href="liga/index.html#/corridas" style="text-decoration:none;color:inherit"><b>${aguardando.length}</b><span>Aguardando análise</span></a>
+      <a class="kpi" href="calculo_liga/corridas/index.html" style="text-decoration:none;color:inherit"><b>${dados.corridas.filter(c => String(c.data || '').startsWith(ano)).length}</b><span>Corridas em ${ano}</span></a>
+      <a class="kpi amar" href="calculo_liga/corridas/index.html" style="text-decoration:none;color:inherit"><b>${aguardando.length}</b><span>Aguardando análise</span></a>
 ` : '') + (podeVer('retornos') ? `
-      <a class="kpi verde" href="liga/index.html#/retornos" style="text-decoration:none;color:inherit"><b>${comSaldo.length}</b><span>Retornos com saldo</span></a>
-      <a class="kpi lar" href="liga/index.html#/retornos" style="text-decoration:none;color:inherit"><b>${Math.round(comSaldo.reduce((s, x) => s + x.saldo, 0)).toLocaleString('pt-BR')}</b><span>Kg de retorno em saldo</span></a>` : '');
+      <a class="kpi verde" href="calculo_liga/retornos/index.html" style="text-decoration:none;color:inherit"><b>${comSaldo.length}</b><span>Retornos com saldo</span></a>
+      <a class="kpi lar" href="calculo_liga/retornos/index.html" style="text-decoration:none;color:inherit"><b>${Math.round(comSaldo.reduce((s, x) => s + x.saldo, 0)).toLocaleString('pt-BR')}</b><span>Kg de retorno em saldo</span></a>` : '');
   };
   banco.ouvirColecao(COL.corridas, l => { dados.corridas = l; pintar(); });
   banco.ouvirColecao(COL.retornos, l => { dados.retornos = l; pintar(); });

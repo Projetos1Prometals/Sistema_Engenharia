@@ -1,0 +1,12 @@
+/* certificados/lista/lista.css — busca por OP e lista dos certificados */
+/* ---------- busca ---------- */
+.busca.grande input{font-size:16px;padding:11px 12px 11px 38px}
+.resbox{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--linha2);font-size:13.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.resbox.ocioso{color:var(--mut)}
+.resbox .chip{display:inline-flex;flex-direction:column;align-items:flex-start;padding:4px 10px;border-radius:8px;border:1px solid var(--lar);background:var(--lar-bg);color:var(--txt);font-weight:700;font-size:13px;cursor:pointer}
+.resbox .chip small{font-weight:500;color:var(--mut);font-size:10.5px}
+.resbox .qtd{margin-left:auto;color:var(--mut);font-size:12px}
+.tab-cert td.ops{max-width:260px;white-space:normal}
+.tab-cert td.cli{max-width:220px;white-space:normal}
+.tab-cert th.ck,.tab-cert td.ck{width:30px}
+.tab-cert tr.hit td{background:var(--lar-bg)}

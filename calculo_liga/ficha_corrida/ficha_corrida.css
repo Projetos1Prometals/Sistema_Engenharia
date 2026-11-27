@@ -1,0 +1,63 @@
+/* =====================================================================
+   calculo_liga/ficha_corrida/ficha_corrida.css — ficha da corrida e o
+   boletim impresso (Ctrl+P), com a mesma cara da folha da planilha
+   ===================================================================== */
+.comp-grade{display:grid;grid-template-columns:1fr 200px;gap:16px;align-items:stretch}
+@media (max-width:1100px){.comp-grade{grid-template-columns:1fr}}
+.carga-box{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:14px 16px;border:1px solid var(--linha);border-radius:var(--raio);background:var(--bg)}
+.carga-box span{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.carga-box b{font-size:30px;font-weight:800}
+.carga-box b small{font-size:14px;color:var(--mut);font-weight:600}
+.carga-box em{font-style:normal;font-size:12px;padding:3px 8px;border-radius:6px;align-self:flex-start;color:var(--mut)}
+
+.linha-ret{display:grid;grid-template-columns:1fr 120px 120px auto;gap:8px;align-items:center;margin-bottom:12px}
+.linha-ret .ret-info{grid-column:1/-1;font-size:12px;color:var(--mut);margin-top:-4px}
+.grade-kg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.item-kg{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--txt)}
+.item-kg span{display:flex;justify-content:space-between;gap:6px}
+.item-kg small{color:var(--mut2);font-weight:500;font-size:11px}
+
+.cab-ret{margin-bottom:4px}
+.cab-ret span{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+@media (max-width:600px){.linha-ret{grid-template-columns:1fr 1fr auto}.linha-ret select{grid-column:1/-1}.cab-ret{display:none}}
+
+/* ---------- boletim (só aparece na impressão) — mesma cara da folha da planilha ---------- */
+#boletim{display:none}
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  html,body{background:#fff!important;color:#000!important}
+  :root{color-scheme:light}
+  .conteudo{padding:0!important}
+  #boletim{display:block}
+  .aviso,.fundo-modal{display:none!important}
+}
+.bol{font:10pt/1.2 Arial,Helvetica,sans-serif;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bol-tab{width:100%;border-collapse:collapse;table-layout:fixed}
+.bol-tab th,.bol-tab td{border:.6pt solid #000;padding:1px 4px;height:5.6mm;font-weight:400;vertical-align:middle;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.bol-tab th{background:#efefef;font-weight:700;text-align:center}
+.bol-tab th.claro{background:#fff}
+.bol .cen{text-align:center}
+.bol-sep{margin-top:2mm}
+.bol-topo td{height:13mm}
+.bol-logo{text-align:center}
+.bol-logo img{max-height:10mm;max-width:100%}
+.bol-titulo{text-align:center;font-size:20pt}
+.bol-faixa{border:.6pt solid #000;border-top:0;background:#efefef;font-weight:700;font-size:13pt;text-align:center;padding:1px 0}
+.bol-faixa.bol-sep{border-top:.6pt solid #000}
+.bol-dados td{font-size:10pt}
+.bol-carga{border-top:0}
+.bol-carga tr.bol-cab th{background:#fff;border-top:0}
+.bol-carga th.grande{font-size:12pt}
+.bol-carga th.bol-grupo{background:#efefef;font-size:10pt;white-space:normal}
+.bol-carga tr.bol-ini > *{border-top:1.2pt solid #000}
+.bol-n{text-align:center;font-weight:700}
+/* legenda dos códigos MP à direita: sem grade, código sublinhado (como na planilha) */
+.bol-carga .bol-leg{border-left:0;border-right:0;border-top:0;border-bottom:0;background:#fff;font-size:8pt;font-weight:400;text-align:left}
+.bol-carga .bol-leg.bol-mp{border-bottom:.6pt solid #000;text-align:center}
+.bol-carga .bol-leg.bol-ult{border-right:.6pt solid #000}
+.bol-carga tr.bol-ini > .bol-leg{border-top:1.2pt solid #000}
+.bol-carga .bol-codcab{text-align:center}
+.bol-comp{margin-top:0}
+.bol-comp th,.bol-comp td{text-align:center;font-size:9.5pt;padding:1px 2px;height:5mm}
+.bol-comp th.bol-faixa-p{background:#fff;font-size:10pt;border-top:1.2pt solid #000}
+.bol-comp tr.azul th{background:#c5d9f1}

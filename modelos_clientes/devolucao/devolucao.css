@@ -1,0 +1,56 @@
+/* =====================================================================
+   modelos_clientes/devolucao/devolucao.css — documento de devolução (layout do
+   app antigo, não mudar sem pedido) e a impressão: só a folha, A4
+   ===================================================================== */
+.folha-wrap{background:#3a4656;border-radius:10px;padding:clamp(8px,2vw,22px);overflow-x:auto}
+.paper{background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;width:100%;max-width:800px;min-width:560px;margin:0 auto;padding:28px 30px 22px;aspect-ratio:210/297;font-size:10.5px;line-height:1.35;display:flex;flex-direction:column;box-shadow:0 10px 30px -10px rgba(0,0,0,.6)}
+.paper table{border-collapse:collapse;width:100%}
+.p-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:4px}
+.p-title{font-weight:800;font-size:19px;letter-spacing:.01em}
+.p-meta{font-size:8.5px;text-align:left;min-width:120px}
+.p-box td{border:1px solid #111;padding:2px 5px;height:20px}
+.p-box .p-lbl{width:22%;text-align:center;font-weight:700;font-size:11px}
+.p-box .p-logo{width:18%;text-align:center}
+.p-box .p-logo img{width:88%}
+.p-box tr:not(:first-child) td.thin{border-top-color:#bbb}
+.p-box tr:not(:last-child) td.thin{border-bottom-color:#bbb}
+.p-flex{display:flex;gap:18px;justify-content:space-between}
+.p-flex span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-oc{width:18%;text-align:center;padding:0!important;vertical-align:top}
+.p-oc div{padding:4px;min-height:40px}
+.p-oc div+div{border-top:1px solid #bbb}
+.p-sec{font-weight:700;font-size:10px;margin:14px 0 4px}
+.p-sec.line{border-bottom:2px solid #111;padding-bottom:4px}
+.p-items th{text-align:left;font-size:10px;padding:5px 2px;border-bottom:1.5px solid #111}
+.p-items td{padding:3px 2px;border-bottom:1px solid #555;height:19px}
+.p-items .c{text-align:center}
+.p-anexo{display:flex;border-bottom:1.5px solid #111;padding:3px 0;gap:10px}
+.p-anexo>*{flex:1}
+.p-fotos{flex:1;display:grid;gap:8px;padding:10px 6%;min-height:200px;align-content:center}
+.p-fotos.n2,.p-fotos.n3,.p-fotos.n4{grid-template-columns:1fr 1fr}
+.p-fotos figure{margin:0;text-align:center}
+.p-fotos img{max-width:100%;max-height:330px;object-fit:contain}
+.p-fotos img:not([src]){width:100%;height:120px;background:#eee}
+.p-fotos.n3 img,.p-fotos.n4 img{max-height:180px}
+.p-fotos figcaption{font-size:8.5px;color:#444}
+.p-nofoto{border:1px dashed #aaa;color:#888;display:grid;place-items:center;height:160px}
+.p-decl{border-top:1.5px solid #111;padding-top:6px;font-size:9.5px;line-height:1.6}
+.p-sign{display:flex;gap:40px;margin-top:30px;font-size:8.5px;text-align:center}
+.p-sign div{flex:1;border-top:1px solid #111;padding-top:3px}
+
+/* Impressão (Ctrl+P na página da devolução): só a folha, A4 */
+@media print{
+  @page{size:A4;margin:9mm}
+  html,body{background:#fff!important}
+  .fundo-modal,.aviso{display:none!important}
+  .conteudo{padding:0!important}
+  #conteudo:has(.folha-wrap)>:not(.folha-wrap){display:none!important}
+  .folha-wrap{background:none!important;padding:0!important;border-radius:0;overflow:visible}
+  .paper{box-shadow:none;max-width:none;min-width:0;width:100%;aspect-ratio:auto;min-height:276mm;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .p-fotos{padding:8px 4%}
+  .p-fotos.n1 img{max-height:120mm}
+  .p-fotos.n2 img{max-height:95mm}
+  .p-fotos.n3 img,.p-fotos.n4 img{max-height:58mm}
+  .p-fotos figure{break-inside:avoid}
+  .p-decl,.p-sign{break-inside:avoid}
+}

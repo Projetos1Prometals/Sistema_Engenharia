@@ -1,0 +1,71 @@
+/* =====================================================================
+   modelos_clientes/modelos_clientes.css — estilos comuns às telas dos Modelos de clientes
+   e o documento de devolução (A4, impresso pelo navegador na tela da devolução)
+   ===================================================================== */
+.peq{font-size:12px}
+.mc-cod{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--lar2);font-variant-numeric:tabular-nums}
+.mc-sec{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px}
+.campo-t{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.mc-acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.mc-acoes .cresce{flex:1}
+.mc-filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.kpis button.kpi{cursor:pointer;font:inherit;color:inherit}
+
+/* formulários em grade de 3 colunas */
+.mc-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.mc-form .l2{grid-column:span 2}
+.mc-form .l3{grid-column:1/-1}
+@media (max-width:700px){.mc-form{grid-template-columns:1fr}.mc-form .l2,.mc-form .l3{grid-column:auto}.mc-form>span:empty{display:none}}
+.mc-linha{display:flex;gap:6px;align-items:center}
+.mc-fotos-novas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:12px;border:1px dashed var(--linha2);border-radius:8px}
+.mc-fotos-novas .mc-foto-tit{grid-column:1/-1}
+@media (max-width:700px){.mc-fotos-novas{grid-template-columns:1fr 1fr}}
+
+/* listas clicáveis */
+.mc-lista{list-style:none;margin:0;padding:0}
+.mc-lista li{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--linha);cursor:pointer}
+.mc-lista li:last-child{border-bottom:0}
+.mc-lista li:hover{background:var(--card2)}
+.mc-lista li .t{flex:1;min-width:0}
+.mc-lista li>span:last-child{white-space:nowrap}
+.mc-lista.borda{border:1px solid var(--linha);border-radius:8px}
+.mc-lista.borda li{cursor:default;padding:7px 12px}
+.mc-lista.borda li a{flex:1;text-decoration:none}
+
+/* ficha */
+.mc-fatos{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px 18px;margin:0}
+.mc-fatos dt{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut)}
+.mc-fatos dd{margin:2px 0 0}
+.mc-fotos{display:grid;gap:14px}
+.mc-foto-tit{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.galeria{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ph{padding:0;border:1px solid var(--linha2);border-radius:8px;overflow:hidden;background:var(--bg);width:110px;height:110px}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+img[data-foto]:not([src]){background:var(--card2)}
+.add-foto{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:110px;height:110px;border:1px dashed var(--linha2);border-radius:8px;color:var(--mut);font-size:12px;cursor:pointer}
+.add-foto:hover{border-color:var(--lar);color:var(--lar2)}
+.add-foto input{display:none}
+.mc-grande{display:block;max-width:100%;max-height:70vh;margin:0 auto;border-radius:8px;min-height:120px}
+
+/* histórico */
+.tl{list-style:none;margin:0;padding:0}
+.ev{display:grid;grid-template-columns:14px 1fr;gap:10px;padding:0 0 16px;position:relative}
+.ev::before{content:"";position:absolute;left:6px;top:14px;bottom:0;width:1px;background:var(--linha2)}
+.ev:last-child::before{display:none}
+.ev-ponto{width:13px;height:13px;border-radius:50%;background:var(--c);margin-top:3px;box-shadow:0 0 0 3px var(--card)}
+.ev-cab{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ev-txt{margin-top:3px}
+.ev-modelo{display:block;margin-top:2px;color:var(--lar2);text-decoration:none;font-size:13px}
+.ev-ferr{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ev .galeria{margin-top:6px}
+.ev .ph{width:80px;height:80px}
+
+/* devolução: escolha dos modelos e fotos */
+.mc-checks{display:flex;flex-direction:column;border:1px solid var(--linha);border-radius:8px;max-height:260px;overflow-y:auto}
+.mc-check{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--linha);cursor:pointer;font-size:13.5px}
+.mc-check:last-child{border-bottom:0}
+.mc-check .t{flex:1}
+.mc-escolha-fotos{display:flex;flex-wrap:wrap;gap:10px}
+.mc-escolha-fotos label{display:flex;flex-direction:column;gap:4px;width:130px;font-size:11.5px;color:var(--mut);cursor:pointer;position:relative}
+.mc-escolha-fotos input{position:absolute;top:6px;left:6px}
+.mc-escolha-fotos img{width:130px;height:100px;object-fit:cover;border-radius:6px;border:1px solid var(--linha2)}

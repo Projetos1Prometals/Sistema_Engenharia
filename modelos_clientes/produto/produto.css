@@ -1,0 +1,7 @@
+/* modelos_clientes/produto/produto.css — consulta pelo código do produto (fotos grandes) */
+.mc-prod-fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:18px}
+.mc-prod-fotos figure{margin:0}
+.mc-prod-fotos figcaption{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.mc-prod-fotos .ph{width:100%;height:240px;margin-bottom:8px}
+.mc-prod-fotos .ph img{object-fit:contain;background:#fff}
+.mc-sem-foto{height:240px;display:grid;place-items:center;border:1px dashed var(--linha2);border-radius:8px;color:var(--mut)}

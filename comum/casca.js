@@ -2,9 +2,9 @@
 //  comum/casca.js — barra lateral, topo, login obrigatório e ajudantes
 //  de tela (avisos, janelas, ícones, formatação) usados por todos os módulos.
 // =====================================================================
-import * as banco from './banco.js?v=1.7.4';
+import * as banco from './banco.js?v=2.0.0';
 
-export const VERSAO = '1.7.4';
+export const VERSAO = '2.0.0';
 
 // ---------- quem acessa o quê (tela Usuários e acessos) ----------
 // Cada usuário tem um documento em eng_acessos (id = e-mail em minúsculas):
@@ -107,6 +107,48 @@ export function semAcesso(el = document.getElementById('conteudo')) {
     <a class="btn" href="${banco.raiz('index.html')}">${icone('voltar')} Visão geral</a>`;
 }
 
+// ---------- páginas: cada tela é uma página própria (pasta do módulo / pasta da tela / index.html) ----------
+// endereco('calculo_liga/ficha_corrida', { id }) → endereço completo da página, com os parâmetros (?id=…)
+export function endereco(caminho, params) {
+  const q = params ? new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== '')).toString() : '';
+  return banco.raiz(caminho.replace(/\/+$/, '') + '/index.html') + (q ? '?' + q : '');
+}
+// Parâmetro do endereço da página aberta (?id=…)
+export const parametro = nome => new URLSearchParams(location.search).get(nome) || '';
+
+// Trocar de página sem perder gravação: espera as gravações em andamento (até 1,5 s; sem internet o
+// Firebase já guardou no computador e envia depois) e só então sai da página.
+function esperarGravacoes(maxMs = 1500) {
+  if (!banco.situacao().pendentes) return Promise.resolve();
+  return new Promise(ok => {
+    const fim = () => { clearTimeout(t); parar(); ok(); };
+    const t = setTimeout(fim, maxMs);
+    const parar = banco.aoMudarEstado(s => { if (!s.pendentes) fim(); });
+  });
+}
+export async function ir(url, { trocar = false } = {}) {
+  await esperarGravacoes();
+  if (trocar) location.replace(url); else location.href = url;
+}
+// Link clicado com gravação em andamento: espera antes de sair (mesma regra do ir())
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href]');
+  if (!a || e.defaultPrevented || a.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+  if (a.origin !== location.origin || !banco.situacao().pendentes) return;
+  e.preventDefault();
+  ir(a.href);
+});
+
+// Filtros e escolhas de uma tela, lembrados enquanto a aba estiver aberta (voltar para a tela mantém a busca)
+export function filtroDaTela(chave, padrao) {
+  let f = { ...padrao };
+  try { f = { ...padrao, ...JSON.parse(sessionStorage.getItem('pmt_filtro:' + chave) || '{}') }; } catch (e) { /* sem armazenamento */ }
+  window.addEventListener('pagehide', () => {
+    try { sessionStorage.setItem('pmt_filtro:' + chave, JSON.stringify(f, (k, v) => (v instanceof Set ? undefined : v))); } catch (e) { /* sem armazenamento */ }
+  });
+  return f;
+}
+
 // Tela só de consulta: os campos ficam travados e os botões de edição (classe "so-ed") somem.
 // Campos que não mudam dados (busca, filtros, data das amostras…) levam a classe "livre".
 export function modoLeitura(sim, texto = 'Você está só consultando esta tela. Alterações são feitas por quem tem acesso de edição.') {
@@ -169,37 +211,37 @@ export function icone(nome, cls = '') {
 const MENU = [
   { itens: [{ id: 'inicio', nome: 'Visão geral', ic: 'casa', href: 'index.html' }] },
   { sec: 'Cálculo de Liga', itens: [
-    { id: 'corridas', nome: 'Corridas', ic: 'chama', href: 'liga/index.html#/corridas' },
-    { id: 'amostras', nome: 'Amostras do dia', ic: 'tubo', href: 'liga/index.html#/amostras' },
-    { id: 'retornos', nome: 'Retornos', ic: 'reciclar', href: 'liga/index.html#/retornos' },
-    { id: 'ligas', nome: 'Ligas e normas', ic: 'frasco', href: 'liga/index.html#/ligas' },
-    { id: 'materiais', nome: 'Sucatas e ferroligas', ic: 'caixas', href: 'liga/index.html#/materiais' },
+    { id: 'corridas', nome: 'Corridas', ic: 'chama', href: 'calculo_liga/corridas/index.html' },
+    { id: 'amostras', nome: 'Amostras do dia', ic: 'tubo', href: 'calculo_liga/amostras_dia/index.html' },
+    { id: 'retornos', nome: 'Retornos', ic: 'reciclar', href: 'calculo_liga/retornos/index.html' },
+    { id: 'ligas', nome: 'Ligas e normas', ic: 'frasco', href: 'calculo_liga/ligas_normas/index.html' },
+    { id: 'materiais', nome: 'Sucatas e ferroligas', ic: 'caixas', href: 'calculo_liga/sucatas_ferroligas/index.html' },
   ] },
   // Pedido do usuário: 3 tópicos. Item com filhos: as telas aparecem embaixo dele quando se está nele.
   { sec: 'Modelos', itens: [
     { id: 'almox', nome: 'Almoxarifado modelos', ic: 'grade', filhos: [
-      { id: 'mapa', nome: 'Prateleiras', ic: 'grade', href: 'modelos/index.html#/mapa' },
-      { id: 'modelos', nome: 'Modelos', ic: 'cubo', href: 'modelos/index.html#/lista' },
-      { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'modelos/index.html#/ruas' },
+      { id: 'mapa', nome: 'Prateleiras', ic: 'grade', href: 'almoxarifado_modelos/prateleiras/index.html' },
+      { id: 'modelos', nome: 'Modelos', ic: 'cubo', href: 'almoxarifado_modelos/modelos/index.html' },
+      { id: 'ruas', nome: 'Ruas e importação', ic: 'caixas', href: 'almoxarifado_modelos/ruas_importacao/index.html' },
     ] },
     { id: 'prometals', nome: 'Modelos Prometals', ic: 'cubo', filhos: [
-      { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos/index.html#/comercial' },
+      { id: 'comercial', nome: 'Lista comercial', ic: 'documento', href: 'modelos_prometals/lista_comercial/index.html' },
     ] },
     { id: 'mcli', nome: 'Modelos de clientes', ic: 'cubo', filhos: [
-      { id: 'mcli-painel', tela: 'modelosClientes', nome: 'Painel', ic: 'grade', href: 'modelos-clientes/index.html#/painel' },
-      { id: 'mcli-modelos', tela: 'modelosClientes', nome: 'Modelos', ic: 'cubo', href: 'modelos-clientes/index.html#/modelos' },
-      { id: 'mcli-devolucoes', tela: 'modelosClientes', nome: 'Devoluções', ic: 'documento', href: 'modelos-clientes/index.html#/devolucoes' },
-      { id: 'mcli-clientes', tela: 'modelosClientes', nome: 'Clientes', ic: 'usuarios', href: 'modelos-clientes/index.html#/clientes' },
-      { id: 'mcli-planilha', tela: 'modelosClientes', nome: 'Importar / Exportar', ic: 'subir', href: 'modelos-clientes/index.html#/planilha' },
-      { id: 'mcli-config', tela: 'modelosClientes', nome: 'Configurações', ic: 'engrenagem', href: 'modelos-clientes/index.html#/config' },
+      { id: 'mcli-painel', tela: 'modelosClientes', nome: 'Painel', ic: 'grade', href: 'modelos_clientes/painel/index.html' },
+      { id: 'mcli-modelos', tela: 'modelosClientes', nome: 'Modelos', ic: 'cubo', href: 'modelos_clientes/modelos/index.html' },
+      { id: 'mcli-devolucoes', tela: 'modelosClientes', nome: 'Devoluções', ic: 'documento', href: 'modelos_clientes/devolucoes/index.html' },
+      { id: 'mcli-clientes', tela: 'modelosClientes', nome: 'Clientes', ic: 'usuarios', href: 'modelos_clientes/clientes/index.html' },
+      { id: 'mcli-planilha', tela: 'modelosClientes', nome: 'Importar / Exportar', ic: 'subir', href: 'modelos_clientes/importar_exportar/index.html' },
+      { id: 'mcli-config', tela: 'modelosClientes', nome: 'Configurações', ic: 'engrenagem', href: 'modelos_clientes/configuracoes/index.html' },
     ] },
   ] },
-  { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', href: 'certificados/index.html#/lista' }] },
+  { sec: 'Qualidade', itens: [{ id: 'certificados', nome: 'Certificados', ic: 'certificado', href: 'certificados/lista/index.html' }] },
   // Instrução de Processo: por enquanto é o app separado (Supabase), aberto numa aba nova
   { sec: 'Processo', itens: [{ id: 'instrucao', nome: 'Instrução de Processo', ic: 'prancheta', href: 'https://projetos1prometals.github.io/instrucao-processo-prometals/', externo: true }] },
   { sec: 'Sistema', itens: [
-    { id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'liga/index.html#/config' },
-    { id: 'usuarios', nome: 'Usuários e acessos', ic: 'cadeado', href: 'usuarios/index.html', admin: true },
+    { id: 'config', nome: 'Configurações', ic: 'engrenagem', href: 'sistema/configuracoes/index.html' },
+    { id: 'usuarios', nome: 'Usuários e acessos', ic: 'cadeado', href: 'sistema/usuarios_acessos/index.html', admin: true },
   ] },
 ];
 // Item do menu aparece se a pessoa pode ver a tela (visão geral e atalhos externos: sempre).

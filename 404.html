@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Página não encontrada · Sistema Engenharia</title>
+<style>
+  :root{color-scheme:light dark}
+  body{margin:0;font:15px/1.5 "Segoe UI",system-ui,sans-serif;background:#f4f2ee;color:#222;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box}
+  @media (prefers-color-scheme:dark){body{background:#16191e;color:#e8e6e1}}
+  .caixa{max-width:460px;text-align:center}
+  a{color:#E2622C;font-weight:600}
+</style>
+</head>
+<body>
+<div class="caixa" id="msg">Abrindo…</div>
+<script>
+// =====================================================================
+//  404.html — o GitHub Pages mostra esta página para todo endereço que não existe.
+//  Em 2026-11 cada tela virou uma página própria (pasta do módulo / pasta da tela).
+//  Aqui os endereços antigos (favoritos, link da Instrução de Processo…) e a
+//  pasta de um módulo sem a tela vão para a página nova.
+// =====================================================================
+(function () {
+  var partes = location.pathname.split('/');
+  var PASTAS = ['liga', 'modelos', 'modelos-clientes', 'usuarios', 'calculo_liga', 'almoxarifado_modelos',
+    'modelos_prometals', 'modelos_clientes', 'certificados', 'sistema'];
+  var i = -1;
+  for (var k = 0; k < partes.length; k++) if (PASTAS.indexOf(partes[k]) >= 0) { i = k; break; }
+  var base = (i >= 0 ? partes.slice(0, i) : partes.slice(0, 2)).join('/') + '/';
+  var pasta = i >= 0 ? partes[i] : '';
+  // "#/corrida/abc?pos=1" → ['corrida', 'abc'] e ?pos=1
+  var hash = decodeURIComponent((location.hash || '').replace(/^#\/?/, ''));
+  var q = hash.indexOf('?') >= 0 ? hash.slice(hash.indexOf('?') + 1) : '';
+  var rota = (q ? hash.slice(0, hash.indexOf('?')) : hash).split('/');
+  var arg = rota.slice(1).join('/');
+  var p = function (k, v) { return v ? '?' + k + '=' + encodeURIComponent(v) : ''; };
+  var destino = null;
+
+  if (pasta === 'liga') {
+    destino = ({
+      corridas: 'calculo_liga/corridas/', amostras: 'calculo_liga/amostras_dia/', retornos: 'calculo_liga/retornos/',
+      ligas: 'calculo_liga/ligas_normas/', materiais: 'calculo_liga/sucatas_ferroligas/', config: 'sistema/configuracoes/',
+    })[rota[0]] || 'calculo_liga/corridas/';
+    if (rota[0] === 'corrida') destino = 'calculo_liga/ficha_corrida/' + (arg && arg !== 'nova' ? p('id', arg) : '');
+  } else if (pasta === 'modelos') {
+    destino = ({ mapa: 'almoxarifado_modelos/prateleiras/', lista: 'almoxarifado_modelos/modelos/',
+      comercial: 'modelos_prometals/lista_comercial/', ruas: 'almoxarifado_modelos/ruas_importacao/' })[rota[0]] || 'almoxarifado_modelos/prateleiras/';
+    if (rota[0] === 'modelo') {
+      var pos = new URLSearchParams(q).get('pos');
+      destino = 'almoxarifado_modelos/ficha_modelo/' + (arg && arg !== 'novo' ? p('id', arg) : p('pos', pos));
+    }
+  } else if (pasta === 'modelos-clientes') {
+    destino = ({ painel: 'painel/', modelos: 'modelos/', devolucoes: 'devolucoes/', clientes: 'clientes/',
+      planilha: 'importar_exportar/', config: 'configuracoes/', produto: 'produto/' })[rota[0]] || 'painel/';
+    if (rota[0] === 'modelo') destino = 'ficha_modelo/' + p('id', arg);
+    if (rota[0] === 'devolucao') destino = 'devolucao/' + p('id', arg);
+    if (rota[0] === 'produto') destino = 'produto/' + p('codigo', arg);
+    destino = 'modelos_clientes/' + destino;
+  } else if (pasta === 'certificados' && (partes[i + 1] === 'index.html' || !partes[i + 1])) {
+    destino = 'certificados/lista/';
+    if (rota[0] === 'c' && arg) destino = 'certificados/certificado/' + p('id', arg);
+    if (rota[0] === 'novo') destino = 'certificados/lista/' + p('novo', new URLSearchParams(q).get('corrida'));
+    if (rota[0] === 'config') destino = 'certificados/assinatura_backup/';
+  } else if (pasta === 'usuarios') destino = 'sistema/usuarios_acessos/';
+  // pasta de um módulo, sem a tela: a primeira tela do módulo
+  else if (!partes[i + 1] || partes[i + 1] === 'index.html') {
+    destino = ({ calculo_liga: 'calculo_liga/corridas/', almoxarifado_modelos: 'almoxarifado_modelos/prateleiras/',
+      modelos_prometals: 'modelos_prometals/lista_comercial/', modelos_clientes: 'modelos_clientes/painel/',
+      sistema: 'sistema/configuracoes/' })[pasta] || null;
+  }
+
+  if (destino) {
+    var url = base + destino.replace(/\/(\?|$)/, '/index.html$1');
+    location.replace(url);
+  } else {
+    document.getElementById('msg').innerHTML = 'Página não encontrada.<br><a href="' + base + 'index.html">Ir para a Visão geral</a>';
+  }
+})();
+</script>
+</body>
+</html>
