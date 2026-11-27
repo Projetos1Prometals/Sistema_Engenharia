@@ -92,6 +92,8 @@ fundo branco, bordas pretas finas, cabeçalhos cinza.
   (no Firestore, só grava se a mudança tocar apenas `situacao`, `historico`, `_em`, `_por`).
 
 ## Modelos de clientes (`modelos-clientes/`) — modelos que os clientes deixam na empresa
+- **Desligado por enquanto** (pedido do usuário, 2026-11-27): `TELAS_DESLIGADAS = ['modelosClientes']` em `casca.js`
+  → some do menu e da Visão geral, e a página mostra "sem acesso" (até para o admin). Para voltar: esvaziar a lista.
 - Porte do app antigo (artifact do Claude, `app-modelos-clientes/`, no `.gitignore`, só estudo). Mesmas telas e regras:
   Painel, Modelos (+ ficha `#/modelo/<id>`), Devoluções (+ `#/devolucao/<id>`), Clientes, Importar / Exportar, Configurações.
   Os dados do app antigo eram de teste: **não** foram migrados.

@@ -3,8 +3,8 @@
 //  Telas: Corridas (lista e ficha), Retornos, Ligas e normas,
 //  Sucatas e ferroligas, Configurações (forno, contadores, importação, backup).
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.3';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo, podeEditar, podeVer, modoLeitura, semAcesso, TELAS_LIGA } from '../comum/casca.js?v=1.7.3';
+import * as banco from '../comum/banco.js?v=1.7.4';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmt, fmtKg, hoje, fmtData, icone, baixarArquivo, podeEditar, podeVer, modoLeitura, semAcesso, TELAS_LIGA } from '../comum/casca.js?v=1.7.4';
 import {
   ELEMENTOS, COL, acharLiga, mesmaLiga, calcular, situacaoElemento, conferir, saldos, numeroCorrida,
   codigoRetornoDaCorrida, idCorrida, statusCorrida, lerOps, temAnalise, normLiga, baixaDoRetorno, ELEMENTOS_LAB_EXTRA,

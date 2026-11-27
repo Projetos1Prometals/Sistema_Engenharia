@@ -7,15 +7,15 @@
 //  página de consulta #/produto/<código> (a Instrução de Processo vai abrir).
 //  Permissão: tela "modelosClientes" em Usuários e acessos.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.3';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, modoLeitura, baixarArquivo } from '../comum/casca.js?v=1.7.3';
-import { empresa, htmlFolha, fmtDataHora, DECL_PADRAO, CHAVES_EMPRESA } from './folha.js?v=1.7.3';
-import { TIPOS_FOTO, enviarFotos, preencherFotos, urlFoto, apagarFoto } from './fotos.js?v=1.7.3';
-import { entrarInstrucao, ipsDeCliente, fotoDaIP, FOTOS_IP } from './instrucao.js?v=1.7.3';
+import * as banco from '../comum/banco.js?v=1.7.4';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, modoLeitura, baixarArquivo } from '../comum/casca.js?v=1.7.4';
+import { empresa, htmlFolha, fmtDataHora, DECL_PADRAO, CHAVES_EMPRESA } from './folha.js?v=1.7.4';
+import { TIPOS_FOTO, enviarFotos, preencherFotos, urlFoto, apagarFoto } from './fotos.js?v=1.7.4';
+import { entrarInstrucao, ipsDeCliente, fotoDaIP, FOTOS_IP } from './instrucao.js?v=1.7.4';
 import {
   CAMPOS_IMPORTACAO, autoMapear, paraData, textoCelula, arrumarCep, arrumarCnpj, separarTitulos,
   lerArquivoPlanilha, lerTextoColado, montarXlsx, norm, digitos,
-} from './planilha.js?v=1.7.3';
+} from './planilha.js?v=1.7.4';
 
 export const COL = {
   clientes: 'eng_clientes', modelos: 'eng_mcli_modelos', eventos: 'eng_mcli_eventos', devolucoes: 'eng_mcli_devolucoes',

@@ -1,8 +1,8 @@
 // =====================================================================
 //  comum/inicio.js — tela de entrada (login) e visão geral dos módulos
 // =====================================================================
-import * as banco from './banco.js?v=1.7.3';
-import { montar, icone, esc, aviso, aplicarTema, podeVer, TELAS_LIGA, TELAS_MODELOS, ADMINS } from './casca.js?v=1.7.3';
+import * as banco from './banco.js?v=1.7.4';
+import { montar, icone, esc, aviso, aplicarTema, podeVer, TELAS_LIGA, TELAS_MODELOS, ADMINS } from './casca.js?v=1.7.4';
 import { COL, saldos, statusCorrida, acharLiga } from '../liga/calculo.js?v=1.4.0';
 
 aplicarTema();

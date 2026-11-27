@@ -3,8 +3,8 @@
 //  Telas: Prateleiras (mapa), Modelos (lista e ficha), Lista comercial,
 //  Ruas e importação. Só a Engenharia edita (podeEditar); os outros só consultam.
 // =====================================================================
-import * as banco from '../comum/banco.js?v=1.7.3';
-import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, TELAS_MODELOS, baixarArquivo } from '../comum/casca.js?v=1.7.3';
+import * as banco from '../comum/banco.js?v=1.7.4';
+import { montar, definirTrilha, marcarMenu, aviso, janela, esc, num, fmtData, icone, hoje, podeEditar, podeVer, semAcesso, TELAS_MODELOS, baixarArquivo } from '../comum/casca.js?v=1.7.4';
 import {
   COL, SITUACOES, EXTENSOES, CAMPOS_COMERCIAIS, normCodigo, idModelo, chaveDesenho, situacao, lerPosicao,
   posicoesDaRua, ocupacao, chaveDiametro, lerVolumes,
